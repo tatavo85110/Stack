@@ -118,19 +118,19 @@ function withCheck(a: App, c: Check): App {
   const uptime = last30.length ? (last30.filter((x) => x.ok).length / last30.length) * 100 : -1;
   const uptimeSeries = Array.from({ length: 30 }, (_, i) => {
     const from = now - (30 - i) * day, to = from + day;
-    const d = checks.filter((x) => x.t >= from && x.t < to);
+    const d = checks.filter((x) => x.t > from && x.t <= to);
     return d.length ? (d.filter((x) => x.ok).length / d.length) * 100 : -1;
   });
   const responseSeries = Array.from({ length: 24 }, (_, i) => {
     const from = now - (24 - i) * 3_600_000, to = from + 3_600_000;
-    const d = checks.filter((x) => x.ok && x.t >= from && x.t < to);
+    const d = checks.filter((x) => x.ok && x.t > from && x.t <= to);
     return d.length ? Math.round(d.reduce((s, x) => s + x.ms, 0) / d.length) : 0;
   });
   const recent = checks.slice(0, 2);
   const status: App["status"] = !c.ok ? (recent.every((x) => !x.ok) ? "down" : "warn") : c.ms > 3000 ? "warn" : "ok";
   return { ...a, checks, uptime, uptimeSeries, responseSeries, responseMs: c.ok ? c.ms : a.responseMs, status };
 }
-export const DEFAULT_WIDGETS = ["kpis", "raccourcis", "semaine", "echeances", "applis", "taches", "ca", "projet", "pipeline", "rdv"];
+export const DEFAULT_WIDGETS = ["kpis", "resume", "raccourcis", "semaine", "echeances", "applis", "taches", "ca", "projet", "pipeline", "rdv", "demandes"];
 
 export const useStack = create<State>()(
   persist(

@@ -3,7 +3,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { ClientForm } from "@/components/ClientForm";
 import Link from "next/link";
-import { Mail, Phone, ExternalLink, Check, Pencil, Plus } from "lucide-react";
+import { Mail, Phone, ExternalLink, Check, Pencil, Plus, Share2, FileText, Inbox } from "lucide-react";
+import { pack, baseUrl, type PortalData } from "@/lib/share";
+import { RequestForm } from "@/components/RequestForm";
 import { useStack } from "@/lib/store";
 import type { Stage } from "@/lib/types";
 import { Avatar, Button, ButtonLink, Card, Empty, Kpi, Modal, PageHeader, Pill, inputCls } from "@/components/ui";
@@ -25,6 +27,22 @@ function ClientPage() {
   const [edit, setEdit] = useState(false);
   const [action, setAction] = useState({ label: "", date: isoIn(2) });
   const [noteText, setNoteText] = useState("");
+  const [portalMsg, setPortalMsg] = useState("");
+  const [asking, setAsking] = useState(false);
+  const { projects, requests, settings, updateRequest } = useStack();
+  const sharePortal = async () => {
+    if (!c) return;
+    const d: PortalData = {
+      v: 1, client: c.name, from: settings.myName, email: settings.contactEmail, at: new Date().toISOString(),
+      apps: apps.filter((a) => a.clientId === c.id).map((a) => ({ name: a.name, url: a.url, uptime: a.uptime, status: a.status })),
+      projects: projects.filter((p) => p.clientId === c.id).map((p) => ({ title: p.title, progress: p.progress, column: p.column, due: p.due, tasks: (p.tasks ?? []).map((t) => ({ label: t.label, done: t.done })), deliverables: (p.deliverables ?? []).map((x) => ({ label: x.label, url: x.url, date: x.date })) })),
+      inbox: settings.supabaseUrl && settings.supabaseKey ? { url: settings.supabaseUrl, key: settings.supabaseKey } : undefined,
+    };
+    const link = `${baseUrl()}/portail/#d=${await pack(d)}`;
+    await navigator.clipboard?.writeText(link).catch(() => {});
+    addHistory(c.id, "Lien du portail client partagé");
+    setPortalMsg(link);
+  };
   const c = clients.find((x) => x.id === id);
   if (!c) return <Empty>Ce client n&apos;existe pas. <Link className="text-bright" href="/clients">Retour aux clients</Link></Empty>;
   const since12 = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
@@ -38,6 +56,8 @@ function ClientPage() {
         actions={
           <>
             <Button onClick={() => setEdit(true)}><Pencil size={15} /> Modifier</Button>
+            <Button onClick={sharePortal}><Share2 size={15} /> Portail client</Button>
+            <ButtonLink href={`/clients/rapport?id=${c.id}`}><FileText size={15} /> Rapport du mois</ButtonLink>
             {c.email && <ButtonLink href={`mailto:${c.email}`} external><Mail size={15} /> Écrire un e-mail</ButtonLink>}
             <ButtonLink href={INDY_URL} external variant="primary">Nouveau devis dans Indy <ExternalLink size={14} /></ButtonLink>
           </>
@@ -51,6 +71,14 @@ function ClientPage() {
         <Pill>Client depuis {new Date(c.since).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</Pill>
         <Pill tone="info">{c.source}</Pill>
       </div>
+      {portalMsg && (
+        <div className="mb-5 rounded-xl bg-ok-bg p-3 text-sm text-ok">
+          <p className="font-semibold">Lien du portail copié. Envoie-le à ton client : il y voit ses sites, l&apos;avancement, les livrables, et peut te faire une demande.</p>
+          <p className="mt-1 truncate text-xs">{portalMsg}</p>
+          {!settings.contactEmail && <p className="mt-1 text-xs text-warn">Ajoute ton email de contact dans Réglages pour que le client puisse t&apos;écrire.</p>}
+          <p className="mt-1 text-xs">Le lien montre l&apos;état d&apos;aujourd&apos;hui. Recrée-le après une avancée importante.</p>
+        </div>
+      )}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi tone="night" label="CA total" value={eur(clientTotal(c))} hint={`${paid} facture${paid > 1 ? "s" : ""}`} />
         <Kpi label="CA 12 mois" value={eur(c.invoices.filter((i) => i.date >= since12).reduce((a, i) => a + i.amount, 0))} />
@@ -108,6 +136,19 @@ function ClientPage() {
               </form>
             )}
           </Card>
+          <Card title="Demandes" action={<button onClick={() => setAsking(true)} className="rounded-lg p-1.5 text-ink-2 hover:bg-muted hover:text-bright" aria-label="Ajouter une demande"><Plus size={16} /></button>}>
+            <ul className="space-y-2">
+              {requests.filter((r) => r.clientId === c.id).slice(0, 6).map((r) => (
+                <li key={r.id} className="rounded-lg bg-muted p-2.5 text-sm">
+                  <p className="line-clamp-3">{r.text}</p>
+                  <div className="mt-1.5 flex items-center justify-between text-xs text-ink-2"><span>{shortDate(r.date)}</span>
+                    <select value={r.status} onChange={(e) => updateRequest(r.id, { status: e.target.value as typeof r.status })} className="rounded-md bg-surface px-1.5 py-0.5 font-semibold" aria-label="Statut"><option>Nouvelle</option><option>En cours</option><option>Faite</option></select>
+                  </div>
+                </li>
+              ))}
+              {!requests.some((r) => r.clientId === c.id) && <p className="flex items-center gap-2 text-sm text-ink-2"><Inbox size={15} /> Aucune demande.</p>}
+            </ul>
+          </Card>
           <Card title="Factures (depuis Indy)">
             <ul className="max-h-72 space-y-2 overflow-y-auto">
               {[...c.invoices].sort((a, b) => b.date.localeCompare(a.date)).map((i, k) => (
@@ -118,6 +159,7 @@ function ClientPage() {
           </Card>
         </div>
       </div>
+      <Modal open={asking} onClose={() => setAsking(false)} title="Nouvelle demande">{asking && <RequestForm clientId={c.id} onDone={() => setAsking(false)} />}</Modal>
       <Modal open={edit} onClose={() => setEdit(false)} title="Modifier le client"><ClientForm initial={c} onDone={() => setEdit(false)} onDeleted={() => router.push("/clients")} /></Modal>
     </>
   );

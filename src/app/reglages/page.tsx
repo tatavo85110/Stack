@@ -61,7 +61,7 @@ export default function Reglages() {
             {field("hourlyRate", "Taux horaire (€/h)", { type: "number" })}
             {field("monitorMinutes", "Vérifier les sites toutes les (min)", { type: "number" })}
           </div>
-          <Button className="mt-3" onClick={askNotify}><Bell size={16} /> {settings.notify ? "Alertes activées" : "Activer les alertes (site en panne, échéances)"}</Button>
+          <Button className="mt-3 !whitespace-normal text-left" onClick={askNotify}><Bell size={16} /> {settings.notify ? "Alertes activées" : "Activer les alertes (site en panne, échéances)"}</Button>
         </Card>
         <SyncCard />
         <Card title="Clés des services" className="lg:col-span-2">

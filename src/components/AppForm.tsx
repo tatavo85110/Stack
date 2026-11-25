@@ -9,13 +9,15 @@ export function AppForm({ initial, onDone, onDeleted }: { initial?: App; onDone:
   const [f, setF] = useState({
     name: initial?.name ?? "", url: initial?.url ?? "https://", stack: initial?.stack ?? "Next.js", host: initial?.host ?? "Vercel", clientId: initial?.clientId ?? "",
     status: initial?.status ?? "ok", domainExpiry: initial?.domainExpiry ?? "", sslExpiry: initial?.sslExpiry ?? "", hostingRenewal: initial?.hostingRenewal ?? "", notes: initial?.notes ?? "",
+    sentryOrg: initial?.sentryOrg ?? "", sentryProject: initial?.sentryProject ?? "", deployProvider: initial?.deployProvider ?? "", deployProjectId: initial?.deployProjectId ?? "",
+    lastBackup: initial?.lastBackup ?? "", backupEveryDays: String(initial?.backupEveryDays ?? ""),
   });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   return (
     <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault();
       if (!f.name.trim()) return;
-      const data = { ...f, name: f.name.trim(), clientId: f.clientId || undefined, status: f.status as App["status"] };
+      const data = { ...f, name: f.name.trim(), clientId: f.clientId || undefined, status: f.status as App["status"], deployProvider: f.deployProvider as App["deployProvider"], backupEveryDays: Number(f.backupEveryDays) || undefined };
       if (initial) updateApp(initial.id, data); else addApp(data);
       onDone();
     }}>
@@ -41,6 +43,19 @@ export function AppForm({ initial, onDone, onDeleted }: { initial?: App; onDone:
         <Field label="Fin du SSL"><input type="date" className={inputCls} value={f.sslExpiry} onChange={set("sslExpiry")} /></Field>
         <Field label="Hébergement"><input type="date" className={inputCls} value={f.hostingRenewal} onChange={set("hostingRenewal")} /></Field>
       </div>
+      <details className="rounded-xl border border-line p-3" open={!!(f.sentryProject || f.deployProvider || f.lastBackup)}>
+        <summary className="cursor-pointer text-sm font-semibold">Sentry, déploiements et sauvegardes</summary>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <Field label="Organisation Sentry"><input className={inputCls} value={f.sentryOrg} onChange={set("sentryOrg")} placeholder="mon-org" /></Field>
+          <Field label="Projet Sentry"><input className={inputCls} value={f.sentryProject} onChange={set("sentryProject")} placeholder="mon-site" /></Field>
+          <Field label="Déployé avec">
+            <select className={inputCls} value={f.deployProvider} onChange={set("deployProvider")}><option value="">Rien</option><option value="vercel">Vercel</option><option value="netlify">Netlify</option><option value="coolify">Coolify</option></select>
+          </Field>
+          <Field label="Identifiant du projet"><input className={inputCls} value={f.deployProjectId} onChange={set("deployProjectId")} placeholder="prj_… / site id / uuid" /></Field>
+          <Field label="Dernière sauvegarde"><input type="date" className={inputCls} value={f.lastBackup} onChange={set("lastBackup")} /></Field>
+          <Field label="Sauvegarde tous les (jours)"><input type="number" min="1" className={inputCls} value={f.backupEveryDays} onChange={set("backupEveryDays")} /></Field>
+        </div>
+      </details>
       <Field label="Notes (jamais de mot de passe)"><textarea className={inputCls + " h-20 resize-none"} value={f.notes} onChange={set("notes")} /></Field>
       <div className="flex gap-2">
         {initial && <Button type="button" variant="ghost" className="text-down" onClick={() => { if (confirm(`Supprimer ${initial.name} ?`)) { removeApp(initial.id); onDone(); onDeleted?.(); } }}>Supprimer</Button>}

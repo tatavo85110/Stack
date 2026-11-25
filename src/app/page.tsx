@@ -7,6 +7,7 @@ import { useStack, DEFAULT_WIDGETS } from "@/lib/store";
 import { Card, Kpi, Pill, Button, ButtonLink, Avatar, Modal, Empty } from "@/components/ui";
 import { Bars } from "@/components/charts";
 import { AppRow, ShortcutIcon, TodoList } from "@/components/blocks";
+import { MorningWidget } from "@/components/MorningWidget";
 import { eur, longDate, daysUntil, shortDate, hours, INDY_URL, initialsOf } from "@/lib/format";
 import { revenueByMonth, revenueThisMonth, deadlines, weekMinutes, monthlyAverage } from "@/lib/stats";
 import type { Stage } from "@/lib/types";
@@ -25,6 +26,8 @@ const CATALOG: { id: string; label: string; desc: string; wide?: boolean }[] = [
   { id: "pipeline", label: "Pipeline commercial", desc: "Prospects, devis, signés, actifs" },
   { id: "rdv", label: "Prochaine action client", desc: "Le prochain rendez-vous ou relance" },
   { id: "note", label: "Note libre", desc: "Un bloc-notes pour ce que tu veux" },
+  { id: "resume", label: "Résumé du matin (Claude)", desc: "Ce qui est urgent et par quoi commencer", wide: true },
+  { id: "demandes", label: "Demandes clients", desc: "Les demandes à traiter, du portail ou à la main" },
 ];
 
 function WidgetsEditor({ onDone }: { onDone: () => void }) {
@@ -238,6 +241,23 @@ export default function Home() {
         ) : <p className="text-sm text-ink-2">Aucune action prévue. Planifie-en une depuis une fiche client.</p>}
       </Card>
     ),
+    resume: () => <MorningWidget />,
+    demandes: () => {
+      const open = s.requests.filter((r) => r.status !== "Faite");
+      return (
+        <Card title="Demandes clients" action={more("/clients/demandes", "Tout voir")}>
+          <ul className="space-y-2">
+            {open.slice(0, 4).map((r) => (
+              <li key={r.id} className="rounded-xl bg-muted p-2.5 text-sm">
+                <p className="text-xs font-semibold text-ink-2">{clients.find((c) => c.id === r.clientId)?.name ?? r.from} · {shortDate(r.date)}</p>
+                <p className="line-clamp-2">{r.text}</p>
+              </li>
+            ))}
+          </ul>
+          {!open.length && <p className="text-sm text-ink-2">Rien à traiter.</p>}
+        </Card>
+      );
+    },
     note: () => (
       <Card title="Note libre">
         <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Écris ce que tu veux ici, c'est enregistré automatiquement." className="h-40 w-full resize-none rounded-xl bg-muted p-3 text-sm outline-none focus:ring-2 focus:ring-bright/30" />
@@ -250,7 +270,7 @@ export default function Home() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-ink-2 first-letter:uppercase">{longDate()}</p>
-          <h1 className="mt-1 text-[28px] font-extrabold tracking-tight">Bonjour Mathéo</h1>
+          <h1 className="mt-1 text-[28px] font-extrabold tracking-tight">Bonjour {s.settings.myName.split(" ")[0] || "Mathéo"}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setEditing(true)}><Plus size={16} /> Ajouter un widget</Button>
