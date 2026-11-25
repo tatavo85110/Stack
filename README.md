@@ -1,6 +1,6 @@
 # Stack
 
-Le cockpit de Mathéo : applis, clients, projets, temps, contrats de maintenance et raccourcis au même endroit.
+Le cockpit de Mathéo : applis, clients, projets, temps, contenu du site et raccourcis au même endroit.
 La facturation et la compta restent dans [Indy](https://app.indy.fr) : Stack ne fait que lire tes exports et ouvrir Indy.
 
 ## En ligne
@@ -18,24 +18,23 @@ npm run dev
 
 Puis ouvre http://localhost:3000.
 
-## Ce qu'il y a dans cette version
+## Ce qu'il y a dans Stack
 
-- **Accueil** en widgets : « Ajouter un widget » pour choisir, ranger et masquer les blocs (chiffres clés, raccourcis, semaine, échéances, applis, tâches, CA, projet en cours, pipeline, prochaine action, note libre).
-- **Recherche ⌘K** (ou Ctrl+K) : clients, applis, projets, raccourcis et actions rapides.
-- **Raccourcis** : ajout, modification, groupes, import d'un favicon (.ico, .png, .svg) ou initiales + couleur.
-- **Applis** : catalogue, état, disponibilité, temps de réponse, déploiements, échéances (domaine, SSL, hébergement).
-- **Clients** : liste, pipeline par glisser-déposer, fiche client, export CSV.
-- **Statistiques** : 10 indicateurs (CA, récurrent, panier moyen, conversion, délai de signature, évolution, CA par client, sources, fidélité, taux horaire réel).
-- **Import Indy** : exporte tes factures en CSV depuis Indy et glisse le fichier dans Stack (Clients ou Stats). Les doublons sont ignorés. Pas de connexion bancaire.
-- **Projets** : kanban par glisser-déposer, chrono, suivi du temps. Les contrats et la facturation restent dans Indy.
-- **Réglages** : thème, sauvegarde et restauration de tes données dans un fichier (à ranger sur ton Drive), tout effacer, charger des exemples.
-- **Thème clair et sombre**, version mobile avec barre d'onglets en bas.
+- **Accueil** en widgets (ajouter, ranger, masquer), dont le résumé du matin par Claude et les demandes clients.
+- **Recherche ⌘K**, **raccourcis** avec favicon.
+- **Applis** : vérification des sites toutes les 5 min quand Stack est ouvert, disponibilité 30 jours, temps de réponse, alertes. Erreurs Sentry, déploiements Vercel / Netlify / Coolify, date de fin du domaine trouvée automatiquement (RDAP), suivi des sauvegardes, page de statut publique à partager.
+- **Clients** : CRM (liste, pipeline, fiche), import des factures Indy (CSV), 10 statistiques, demandes clients, portail client à partager (état des sites, avancement, étapes, livrables, demande en un clic), rapport mensuel en PDF.
+- **Projets** : kanban, modèles de projet avec étapes, livrables, chrono et temps, tableau d'activité (heures par client, taux facturable, taux horaire réel).
+- **Mon site** : portfolio, témoignages et articles, publiés en JSON dans le dépôt GitHub du site. Le formulaire de contact du site crée des prospects.
+- **Notes techniques** avec recherche simple et recherche intelligente (Claude).
+- **Assistant Claude** : résumé du matin, compte rendu client, analyse d'une erreur, email transformé en tâches.
+- **Synchro** téléphone et ordinateur avec Supabase, appli installable (hors ligne), thème clair et sombre.
 
 ## Données
 
-Stack démarre vide : tu ajoutes toi-même tes raccourcis, applis, clients et projets. Pas encore de base de données : tout est gardé dans le navigateur (localStorage) de l'appareil. Pense à télécharger une sauvegarde depuis Réglages.
-
-Étape suivante prévue : base Supabase (Postgres) avec connexion, puis vrai monitoring des sites (ping régulier).
+- Les données sont dans le navigateur et, une fois connecté dans Réglages, synchronisées dans Supabase (tables `stack_state` et `stack_inbox`, protégées par RLS, inscriptions fermées).
+- Les clés des services (Claude, Sentry, Vercel, Netlify, Coolify, GitHub) restent sur chaque appareil : ni synchro, ni sauvegarde, ni dépôt.
+- La clé Supabase présente dans le code est la clé publique (« publishable ») : elle est faite pour être dans le navigateur.
 
 ## Technique
 
