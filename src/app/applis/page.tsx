@@ -6,7 +6,8 @@ import { Plus, ExternalLink } from "lucide-react";
 import { useStack } from "@/lib/store";
 import { Button, ButtonLink, Card, Empty, Kpi, Modal, PageHeader, Segmented, Status, Pill } from "@/components/ui";
 import { AppForm } from "@/components/AppForm";
-import { daysUntil, initialsOf, num } from "@/lib/format";
+import { AppIcon } from "@/components/blocks";
+import { daysUntil, num } from "@/lib/format";
 import { deadlines } from "@/lib/stats";
 
 type Filter = "all" | "clients" | "perso";
@@ -70,7 +71,7 @@ function Applis() {
                     <tr key={a.id} className="group border-b border-line/60 last:border-0">
                       <td className="px-5 py-3">
                         <Link href={`/applis/fiche?id=${a.id}`} className="flex items-center gap-3 font-semibold group-hover:text-bright">
-                          <span className="flex size-8 items-center justify-center rounded-lg bg-azure text-[11px] font-bold text-azure-text">{initialsOf(a.name)}</span>
+                          <AppIcon app={a} size={32} />
                           {a.name}
                         </Link>
                       </td>

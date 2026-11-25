@@ -1,5 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Globe, Upload, X } from "lucide-react";
+import { fileToIcon, siteFavicon } from "@/lib/icons";
+import { AppIcon } from "./blocks";
 import { useStack } from "@/lib/store";
 import type { App } from "@/lib/types";
 import { Button, Field, inputCls } from "./ui";
@@ -10,19 +13,43 @@ export function AppForm({ initial, onDone, onDeleted }: { initial?: App; onDone:
     name: initial?.name ?? "", url: initial?.url ?? "https://", stack: initial?.stack ?? "Next.js", host: initial?.host ?? "Vercel", clientId: initial?.clientId ?? "",
     status: initial?.status ?? "ok", domainExpiry: initial?.domainExpiry ?? "", sslExpiry: initial?.sslExpiry ?? "", hostingRenewal: initial?.hostingRenewal ?? "", notes: initial?.notes ?? "",
     sentryOrg: initial?.sentryOrg ?? "", sentryProject: initial?.sentryProject ?? "", deployProvider: initial?.deployProvider ?? "", deployProjectId: initial?.deployProjectId ?? "",
-    lastBackup: initial?.lastBackup ?? "", backupEveryDays: String(initial?.backupEveryDays ?? ""),
+    lastBackup: initial?.lastBackup ?? "", backupEveryDays: String(initial?.backupEveryDays ?? ""), icon: initial?.icon ?? "",
   });
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [iconError, setIconError] = useState("");
+  const onFile = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/") && !/\.(ico|svg|png|jpe?g|webp)$/i.test(file.name)) return setIconError("Choisis une image (.ico, .png, .svg, .jpg).");
+    try { setF((x) => ({ ...x, icon: "" })); const icon = await fileToIcon(file); setF((x) => ({ ...x, icon })); setIconError(""); }
+    catch { setIconError("Cette image n'a pas pu être lue. Essaie un .png."); }
+  };
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   return (
     <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault();
       if (!f.name.trim()) return;
-      const data = { ...f, name: f.name.trim(), clientId: f.clientId || undefined, status: f.status as App["status"], deployProvider: f.deployProvider as App["deployProvider"], backupEveryDays: Number(f.backupEveryDays) || undefined };
+      const data = { ...f, icon: f.icon || undefined, name: f.name.trim(), clientId: f.clientId || undefined, status: f.status as App["status"], deployProvider: f.deployProvider as App["deployProvider"], backupEveryDays: Number(f.backupEveryDays) || undefined };
       if (initial) updateApp(initial.id, data); else addApp(data);
       onDone();
     }}>
       <Field label="Nom"><input className={inputCls} value={f.name} onChange={set("name")} required autoFocus /></Field>
-      <Field label="Adresse"><input className={inputCls} value={f.url} onChange={set("url")} /></Field>
+      <Field label="Adresse"><input className={inputCls} value={f.url} onChange={set("url")} onBlur={() => !f.icon && siteFavicon(f.url) && setF((x) => ({ ...x, icon: siteFavicon(x.url) ?? "" }))} /></Field>
+      <div>
+        <span className="mb-1.5 block text-xs font-semibold text-ink-2">Favicon</span>
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-line-strong p-2.5"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files[0]); }}
+        >
+          <AppIcon app={{ name: f.name || "?", icon: f.icon }} size={40} />
+          <Button type="button" className="!px-3 !py-2" onClick={() => fileRef.current?.click()}><Upload size={14} /> Importer</Button>
+          <Button type="button" className="!px-3 !py-2" disabled={!siteFavicon(f.url)} onClick={() => setF({ ...f, icon: siteFavicon(f.url) ?? "" })}><Globe size={14} /> Celui du site</Button>
+          {f.icon && <Button type="button" variant="ghost" className="!px-2 !py-2" aria-label="Retirer le favicon" onClick={() => setF({ ...f, icon: "" })}><X size={14} /></Button>}
+          <span className="text-xs text-ink-2">ou glisse un .ico, .png ou .svg ici</span>
+        </div>
+        <input ref={fileRef} type="file" accept="image/*,.ico" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+        {iconError && <p className="mt-1 text-xs text-down">{iconError}</p>}
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Techno"><input className={inputCls} value={f.stack} onChange={set("stack")} /></Field>
         <Field label="Hébergeur"><input className={inputCls} value={f.host} onChange={set("host")} /></Field>

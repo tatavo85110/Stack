@@ -17,6 +17,8 @@ export interface Deploy { id: string; message: string; status: "Réussi" | "Éch
 export interface App {
   id: string;
   name: string;
+  /** Favicon: an imported image (data URL) or the site's own favicon. */
+  icon?: string;
   clientId?: string;
   url: string;
   stack: string;

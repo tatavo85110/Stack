@@ -19,11 +19,21 @@ export function ShortcutIcon({ s, size = 40 }: { s: Shortcut; size?: number }) {
   );
 }
 
+export function AppIcon({ app, size = 36 }: { app: Pick<App, "name" | "icon">; size?: number }) {
+  const [broken, setBroken] = useState("");
+  return app.icon && broken !== app.icon ? (
+    // eslint-disable-next-line @next/next/no-img-element -- favicons are data URLs or tiny remote icons
+    <img src={app.icon} alt="" onError={() => setBroken(app.icon!)} width={size} height={size} className="shrink-0 rounded-xl border border-line bg-white object-contain p-1" style={{ width: size, height: size }} />
+  ) : (
+    <span className="flex shrink-0 items-center justify-center rounded-xl bg-azure text-xs font-bold text-azure-text" style={{ width: size, height: size }}>{initialsOf(app.name)}</span>
+  );
+}
+
 export function AppRow({ app }: { app: App }) {
   const client = useStack((s) => s.clients.find((c) => c.id === app.clientId));
   return (
     <Link href={`/applis/fiche?id=${app.id}`} className="flex items-center gap-3 rounded-xl border border-transparent p-2.5 transition-[border-color,background,box-shadow] duration-150 hover:border-bright hover:bg-muted/60 hover:shadow-sm">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-azure text-xs font-bold text-azure-text">{initialsOf(app.name)}</span>
+      <AppIcon app={app} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold">{app.name}</span>
         <span className="block truncate text-xs text-ink-2">{client?.name ?? "Perso"} · {app.host}</span>

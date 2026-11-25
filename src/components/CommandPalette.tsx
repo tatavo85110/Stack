@@ -33,7 +33,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const doing = projects.find((p) => p.column === "doing");
     const all: Item[] = [
       ...clients.map((c) => ({ id: "c" + c.id, group: "Clients", label: c.name, hint: c.stage, badge: badge(initialsOf(c.name)), run: go(`/clients/fiche?id=${c.id}`) })),
-      ...apps.map((a) => ({ id: "a" + a.id, group: "Applis", label: a.name, hint: a.url.replace(/^https?:\/\//, ""), badge: badge(initialsOf(a.name)), run: go(`/applis/fiche?id=${a.id}`) })),
+      ...apps.map((a) => ({ id: "a" + a.id, group: "Applis", label: a.name, hint: a.url.replace(/^https?:\/\//, ""), badge: a.icon ? <img src={a.icon} alt="" className="size-8 rounded-lg bg-white object-contain p-1" /> : badge(initialsOf(a.name)), run: go(`/applis/fiche?id=${a.id}`) })),
       ...projects.map((p) => ({ id: "p" + p.id, group: "Projets", label: p.title, hint: clients.find((c) => c.id === p.clientId)?.name ?? "Perso", badge: badge(initialsOf(p.title)), run: go(`/projets`) })),
       ...shortcuts.map((s) => ({
         id: "s" + s.id, group: "Raccourcis", label: s.name, hint: s.url.replace(/^https?:\/\//, ""),

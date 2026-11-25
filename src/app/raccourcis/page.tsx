@@ -8,30 +8,11 @@ import type { Shortcut } from "@/lib/types";
 import { Button, Field, Modal, PageHeader, inputCls } from "@/components/ui";
 import { ShortcutIcon } from "@/components/blocks";
 import { initialsOf } from "@/lib/format";
+import { fileToIcon } from "@/lib/icons";
 
 const COLORS = ["#0b1f3a", "#15325a", "#1d5fd8", "#2f7fd0", "#5aa7e6", "#1b6aa5"];
 
 /** Reads an image file and returns a small square PNG data URL (keeps localStorage light). */
-async function fileToIcon(file: File): Promise<string> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((res, rej) => {
-      const i = new Image();
-      i.onload = () => res(i);
-      i.onerror = rej;
-      i.src = url;
-    });
-    const c = document.createElement("canvas");
-    c.width = c.height = 128;
-    const ctx = c.getContext("2d")!;
-    const r = Math.min(128 / img.width, 128 / img.height);
-    const w = img.width * r, h = img.height * r;
-    ctx.drawImage(img, (128 - w) / 2, (128 - h) / 2, w, h);
-    return c.toDataURL("image/png");
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
 
 function ShortcutForm({ initial, groups, onDone }: { initial?: Shortcut; groups: string[]; onDone: () => void }) {
   const { addShortcut, updateShortcut, removeShortcut } = useStack();
