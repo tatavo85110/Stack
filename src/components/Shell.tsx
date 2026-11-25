@@ -12,6 +12,7 @@ import { CommandPalette } from "./CommandPalette";
 import { useStack, useHydrated } from "@/lib/store";
 import { INDY_URL } from "@/lib/format";
 import { TimerBar } from "./TimerBar";
+import { useIndyHash } from "./IndySync";
 
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
@@ -31,6 +32,7 @@ function Cockpit({ children, path }: { children: ReactNode; path: string }) {
   const hydrated = useHydrated();
   useMonitor();
   useCloudSync();
+  const indyMsg = useIndyHash(hydrated);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -154,6 +156,7 @@ function Cockpit({ children, path }: { children: ReactNode; path: string }) {
       </nav>
 
       <CommandPalette open={cmd} onClose={() => setCmd(false)} />
+      {indyMsg && <div role="status" className="no-print fixed inset-x-4 bottom-24 z-50 mx-auto w-fit rounded-xl bg-night px-4 py-3 text-sm font-semibold text-white shadow-2xl md:bottom-6">{indyMsg}</div>}
     </div>
   );
 }

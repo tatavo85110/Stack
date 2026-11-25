@@ -138,7 +138,7 @@ export default function Home() {
   const render: Record<string, () => ReactNode> = {
     kpis: () => (
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi tone="night" label="CA de ce mois" value={eur(revenueThisMonth(clients))} hint="Selon tes factures importées d'Indy" />
+        <Kpi tone="night" label="CA de ce mois" value={eur(revenueThisMonth(clients))} hint={s.indySyncedAt ? "Selon ton Pilotage Indy" : "Selon tes factures importées d'Indy"} />
         <Kpi label="Applis en ligne" value={apps.length ? `${apps.filter((a) => a.status !== "down").length} / ${apps.length}` : "—"} hint={down.length ? `${down.length} hors ligne` : apps.length ? "Tout va bien" : "Aucune appli"} />
         <Kpi tone="ice" label="Clients actifs" value={clients.filter((c) => c.stage === "Actif" || c.stage === "Signé").length} hint={`${clients.filter((c) => c.stage === "Prospect" || c.stage === "Devis envoyé").length} en cours de signature`} />
         <Kpi tone="plain" label="Temps cette semaine" value={hours(weekTotal)} hint={`${eur(monthlyAverage(clients))} de CA moyen / mois`} />
@@ -189,7 +189,7 @@ export default function Home() {
     ca: () => (
       <Card title="Chiffre d'affaires, 6 mois" action={more("/clients/stats", "Stats")}>
         <Bars data={months} highlight={months.length - 1} format={eur} height={170} />
-        {!months.some((m) => m.value) && <p className="mt-2 text-xs text-ink-2">Importe un export Indy depuis la page Stats pour voir ton CA.</p>}
+        {s.indySyncedAt ? <p className="mt-2 text-xs text-ink-2">Indy, mis à jour le {new Date(s.indySyncedAt).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p> : <p className="mt-2 text-xs text-ink-2">Pas encore relié à Indy : voir <Link className="font-semibold text-bright" href="/reglages">Réglages</Link>.</p>}
       </Card>
     ),
     projet: () =>

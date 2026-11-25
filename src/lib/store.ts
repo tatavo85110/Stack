@@ -59,6 +59,10 @@ interface State {
   addApp: (a: Pick<App, "name" | "url" | "stack" | "host" | "clientId"> & Partial<Pick<App, "domainExpiry" | "sslExpiry" | "hostingRenewal" | "notes" | "status">>) => void;
   importInvoices: (rows: { date: string; client: string; amount: number }[]) => { added: number; skipped: number; newClients: number };
   lastImport: string | null;
+  /** Monthly revenue read from the Indy "Pilotage" dashboard, keyed "YYYY-MM". Wins over imported invoices. */
+  indyMonthly: Record<string, number>;
+  indySyncedAt: string | null;
+  setIndyMonthly: (byYear: Record<string, number[]>) => number;
   updateApp: (id: string, a: Partial<App>) => void;
   removeApp: (id: string) => void;
   updateClient: (id: string, c: Partial<Client>) => void;
@@ -94,7 +98,7 @@ const empty = () => ({
   content: [] as ContentItem[],
   techNotes: [] as TechNote[],
 });
-export const DATA_KEYS = ["shortcuts", "apps", "clients", "projects", "time", "todos", "timer", "lastImport", "widgets", "note", "settings", "requests", "content", "templates", "techNotes"] as const;
+export const DATA_KEYS = ["shortcuts", "apps", "clients", "projects", "time", "todos", "timer", "lastImport", "indyMonthly", "indySyncedAt", "widgets", "note", "settings", "requests", "content", "templates", "techNotes"] as const;
 /** Keys and tokens: they stay on this device and are never put in backups or in the sync. */
 export const SECRET_SETTINGS = ["sentryToken", "vercelToken", "netlifyToken", "coolifyToken", "anthropicKey", "githubToken"] as const;
 
@@ -204,6 +208,15 @@ export const useStack = create<State>()(
           ],
         }),
       lastImport: null,
+      indyMonthly: {},
+      indySyncedAt: null,
+      setIndyMonthly: (byYear) => {
+        const next = { ...get().indyMonthly };
+        let n = 0;
+        for (const [y, values] of Object.entries(byYear)) values.slice(0, 12).forEach((v, i) => { next[`${y}-${String(i + 1).padStart(2, "0")}`] = v; n++; });
+        set({ indyMonthly: next, indySyncedAt: new Date().toISOString() });
+        return n;
+      },
       importInvoices: (rows) => {
         const clients = get().clients.map((c) => ({ ...c, invoices: [...c.invoices] }));
         let added = 0, skipped = 0, newClients = 0;
@@ -235,7 +248,7 @@ export const useStack = create<State>()(
       removeTimeEntry: (id) => set({ time: get().time.filter((t) => t.id !== id) }),
       toggleTheme: () => set({ theme: get().theme === "light" ? "dark" : "light" }),
       loadDemo: () => set({ ...demo() }),
-      clearAll: () => set({ ...empty(), lastImport: null }),
+      clearAll: () => set({ ...empty(), lastImport: null, indyMonthly: {}, indySyncedAt: null }),
       exportData: () => JSON.stringify({ app: "stack", version: 3, exportedAt: new Date().toISOString(), data: publicData(get()) }, null, 2),
       importData: (json) => {
         const parsed = JSON.parse(json);

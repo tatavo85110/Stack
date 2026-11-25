@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { Download, Upload, Trash2, Sparkles, Moon, Sun, Bell } from "lucide-react";
 import { SyncCard } from "@/components/SyncCard";
+import { IndySyncCard } from "@/components/IndySync";
 import type { Settings } from "@/lib/types";
 import { useStack } from "@/lib/store";
 import { Button, Card, Field, PageHeader, inputCls } from "@/components/ui";
@@ -64,6 +65,7 @@ export default function Reglages() {
           <Button className="mt-3 !whitespace-normal text-left" onClick={askNotify}><Bell size={16} /> {settings.notify ? "Alertes activées" : "Activer les alertes (site en panne, échéances)"}</Button>
         </Card>
         <SyncCard />
+        <IndySyncCard />
         <Card title="Clés des services" className="lg:col-span-2">
           <p className="mb-4 text-sm text-ink-2">Ces clés restent sur cet appareil. Elles ne sont ni synchronisées, ni dans les sauvegardes, ni sur GitHub. Mets-les sur chaque appareil où tu en as besoin.</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

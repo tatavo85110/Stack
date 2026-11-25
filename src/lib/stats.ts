@@ -1,5 +1,13 @@
 import type { App, Client, TimeEntry } from "./types";
 import { daysUntil } from "./format";
+import { useStack } from "./store";
+
+/** Revenue of one month: the Indy dashboard figure when synced, otherwise the imported invoices. */
+function monthRevenue(clients: Client[], key: string) {
+  const indy = useStack.getState().indyMonthly?.[key];
+  if (typeof indy === "number") return indy;
+  return clients.flatMap((c) => c.invoices).filter((i) => i.date.startsWith(key)).reduce((a, i) => a + i.amount, 0);
+}
 
 const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
@@ -8,14 +16,14 @@ export function revenueByMonth(clients: Client[], months = 12) {
   return Array.from({ length: months }, (_, k) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - k), 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const value = clients.flatMap((c) => c.invoices).filter((i) => i.date.startsWith(key)).reduce((a, i) => a + i.amount, 0);
+    const value = monthRevenue(clients, key);
     return { label: MONTHS[d.getMonth()].replace(".", ""), value, key };
   });
 }
 
 export function revenueYear(clients: Client[]) {
-  const y = String(new Date().getFullYear());
-  return clients.flatMap((c) => c.invoices).filter((i) => i.date.startsWith(y)).reduce((a, i) => a + i.amount, 0);
+  const y = new Date().getFullYear();
+  return Array.from({ length: 12 }, (_, i) => monthRevenue(clients, `${y}-${String(i + 1).padStart(2, "0")}`)).reduce((a, v) => a + v, 0);
 }
 
 export function revenueThisMonth(clients: Client[]) {
