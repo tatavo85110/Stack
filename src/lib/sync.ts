@@ -47,7 +47,16 @@ export function useSyncStatus() {
 }
 
 let applyingRemote = false;
+/** Server time of the cloud copy this device last sent or received. */
 const STAMP = "stack-sync-stamp";
+/** Set while this device has edits the cloud has not received yet. */
+const DIRTY = "stack-sync-dirty";
+const t = (iso: string | null | undefined) => (iso ? Date.parse(iso) || 0 : 0);
+const ls = {
+  get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch {} },
+  del: (k: string) => { try { localStorage.removeItem(k); } catch {} },
+};
 
 export async function pull(sb: SupabaseClient, userId: string) {
   const { data, error } = await sb.from("stack_state").select("data, updated_at").eq("user_id", userId).maybeSingle();
@@ -55,12 +64,20 @@ export async function pull(sb: SupabaseClient, userId: string) {
   return data as { data: Record<string, unknown>; updated_at: string } | null;
 }
 
+function applyRemote(remote: { data: Record<string, unknown>; updated_at: string }) {
+  applyingRemote = true;
+  try { useStack.getState().replaceAll(remote.data); } finally { applyingRemote = false; }
+  ls.set(STAMP, remote.updated_at);
+  ls.del(DIRTY);
+}
+
 export async function push(sb: SupabaseClient, userId: string) {
   emit("busy");
-  const updated_at = new Date().toISOString();
-  const { error } = await sb.from("stack_state").upsert({ user_id: userId, data: publicData(useStack.getState()), updated_at });
+  // The database stamps updated_at itself (server clock), so devices with a wrong clock can't win by mistake.
+  const { data, error } = await sb.from("stack_state").upsert({ user_id: userId, data: publicData(useStack.getState()) }).select("updated_at").single();
   if (error) return emit("error", error.message);
-  localStorage.setItem(STAMP, updated_at);
+  ls.set(STAMP, (data as { updated_at: string }).updated_at);
+  ls.del(DIRTY);
   emit("ok");
 }
 
@@ -73,37 +90,65 @@ export function useCloudSync() {
     const uid = session.user.id;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let alive = true;
+    let ready = false;
+    let running: Promise<void> | null = null;
 
-    const refresh = async () => {
+    /** A newer cloud copy always wins; otherwise this device sends its unsent edits. */
+    const refresh = () => {
+      if (running) return running;
+      running = (async () => {
+        try {
+          const remote = await pull(sb, uid);
+          if (!alive) return;
+          if (remote && t(remote.updated_at) > t(ls.get(STAMP))) { applyRemote(remote); emit("ok"); }
+          else if (!remote || ls.get(DIRTY) === "1") await push(sb, uid);
+          else emit("ok");
+          ready = true;
+          await importInbox(sb);
+        } catch (e) {
+          emit("error", e instanceof Error ? e.message : "Synchro impossible");
+        } finally {
+          running = null;
+        }
+      })();
+      return running;
+    };
+
+    const send = async () => {
+      if (!alive) return;
+      await running;
       try {
+        // Another device saved in the meantime: take its copy instead of overwriting it.
         const remote = await pull(sb, uid);
-        const mine = localStorage.getItem(STAMP) ?? "";
-        if (remote && remote.updated_at > mine) {
-          applyingRemote = true;
-          useStack.getState().replaceAll(remote.data);
-          applyingRemote = false;
-          localStorage.setItem(STAMP, remote.updated_at);
-          emit("ok");
-        } else if (!remote || remote.updated_at < mine || !mine) await push(sb, uid);
-        else emit("ok");
-        await importInbox(sb);
+        if (remote && t(remote.updated_at) > t(ls.get(STAMP))) { applyRemote(remote); return emit("ok"); }
+        await push(sb, uid);
       } catch (e) {
         emit("error", e instanceof Error ? e.message : "Synchro impossible");
       }
     };
+
     refresh();
     const unsub = useStack.subscribe(() => {
-      if (applyingRemote || !alive) return;
+      // Ignore changes made before the first pull (loading, automatic checks): they must not overwrite the cloud.
+      if (applyingRemote || !alive || !ready) return;
+      ls.set(DIRTY, "1");
       clearTimeout(timer);
-      timer = setTimeout(() => push(sb, uid), 1500);
+      timer = setTimeout(send, 1500);
     });
-    const onFocus = () => document.visibilityState === "visible" && refresh();
-    document.addEventListener("visibilitychange", onFocus);
+    const onVisible = () => document.visibilityState === "visible" && refresh();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    window.addEventListener("online", onVisible);
+    // While the app is open, look for changes from the other device every 20 seconds.
+    const poll = setInterval(() => document.visibilityState === "visible" && refresh(), 20000);
     return () => {
       alive = false;
       clearTimeout(timer);
+      clearInterval(poll);
       unsub();
-      document.removeEventListener("visibilitychange", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("online", onVisible);
     };
   }, [session]);
   return session;
@@ -161,6 +206,12 @@ drop policy if exists "inbox_suppression" on public.stack_inbox;
 create policy "inbox_depot" on public.stack_inbox for insert to anon with check (true);
 create policy "inbox_lecture" on public.stack_inbox for select to authenticated using (true);
 create policy "inbox_suppression" on public.stack_inbox for delete to authenticated using (true);
+
+-- La date de mise à jour vient du serveur, pas de l'horloge de l'appareil.
+create or replace function public.stack_touch() returns trigger language plpgsql as $$
+begin new.updated_at = now(); return new; end $$;
+drop trigger if exists stack_state_touch on public.stack_state;
+create trigger stack_state_touch before insert or update on public.stack_state for each row execute function public.stack_touch();
 
 -- Droits d'accès (les règles ci-dessus filtrent ensuite les lignes).
 grant select, insert, update, delete on public.stack_state to authenticated;
