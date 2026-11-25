@@ -1,4 +1,4 @@
-import type { App, Client, Contract, TimeEntry } from "./types";
+import type { App, Client, TimeEntry } from "./types";
 import { daysUntil } from "./format";
 
 const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
@@ -40,7 +40,8 @@ export function signatureDelay(clients: Client[]) {
   return d.length ? d.reduce((a, b) => a + b, 0) / d.length : 0;
 }
 
-export const recurring = (contracts: Contract[]) => contracts.reduce((a, c) => a + c.monthly, 0);
+/** Average monthly revenue over the last 12 months. */
+export const monthlyAverage = (clients: Client[]) => revenueByMonth(clients, 12).reduce((a, m) => a + m.value, 0) / 12;
 
 export function sources(clients: Client[]) {
   const m = new Map<string, number>();

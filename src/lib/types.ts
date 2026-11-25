@@ -68,16 +68,6 @@ export interface Project {
 
 export interface TimeEntry { id: string; projectId: string; label: string; date: string; minutes: number; billable: boolean }
 
-export interface Contract {
-  id: string;
-  clientId: string;
-  monthly: number;
-  hoursIncluded: number;
-  hoursUsed: number;
-  renewal: string;
-  interventions: { date: string; label: string; minutes: number }[];
-}
-
 export interface Todo { id: string; label: string; done: boolean }
 
 export interface Timer { projectId: string; label: string; startedAt: number }

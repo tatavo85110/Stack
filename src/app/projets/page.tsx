@@ -3,7 +3,7 @@ import { useState } from "react";
 import clsx from "clsx";
 import { Plus, Play, CalendarDays } from "lucide-react";
 import { useStack } from "@/lib/store";
-import type { Column } from "@/lib/types";
+import type { Column, Project } from "@/lib/types";
 import { Button, Field, Kpi, Modal, PageHeader, Pill, Progress, inputCls } from "@/components/ui";
 import { ProjectsTabs } from "@/components/ProjectsTabs";
 import { daysUntil, hours, isoIn, shortDate } from "@/lib/format";
@@ -16,11 +16,17 @@ const COLS: { id: Column; label: string }[] = [
   { id: "done", label: "Terminé" },
 ];
 
-function NewProject({ column, onDone }: { column: Column; onDone: () => void }) {
-  const { clients, addProject } = useStack();
-  const [f, setF] = useState({ title: "", clientId: "", due: isoIn(14), tag: "Front" });
+function ProjectForm({ column, initial, onDone }: { column: Column; initial?: Project; onDone: () => void }) {
+  const { clients, addProject, updateProject, removeProject } = useStack();
+  const [f, setF] = useState({ title: initial?.title ?? "", clientId: initial?.clientId ?? "", due: initial?.due ?? isoIn(14), tag: initial?.tag ?? "Front", progress: initial?.progress ?? 0 });
   return (
-    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!f.title.trim()) return; addProject({ ...f, clientId: f.clientId || undefined, column, progress: 0 }); onDone(); }}>
+    <form className="space-y-4" onSubmit={(e) => {
+      e.preventDefault();
+      if (!f.title.trim()) return;
+      const data = { ...f, title: f.title.trim(), clientId: f.clientId || undefined };
+      if (initial) updateProject(initial.id, data); else addProject({ ...data, column });
+      onDone();
+    }}>
       <Field label="Titre"><input className={inputCls} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} autoFocus required /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Client">
@@ -31,7 +37,12 @@ function NewProject({ column, onDone }: { column: Column; onDone: () => void }) 
         <Field label="Échéance"><input type="date" className={inputCls} value={f.due} onChange={(e) => setF({ ...f, due: e.target.value })} /></Field>
       </div>
       <Field label="Étiquette"><input className={inputCls} value={f.tag} onChange={(e) => setF({ ...f, tag: e.target.value })} /></Field>
-      <div className="flex justify-end gap-2"><Button type="button" onClick={onDone}>Annuler</Button><Button variant="primary">Ajouter</Button></div>
+      <Field label={`Avancement : ${f.progress} %`}><input type="range" min="0" max="100" step="5" value={f.progress} onChange={(e) => setF({ ...f, progress: Number(e.target.value) })} className="w-full accent-[var(--bright)]" /></Field>
+      <div className="flex gap-2">
+        {initial && <Button type="button" variant="ghost" className="text-down" onClick={() => { if (confirm(`Supprimer « ${initial.title} » et son temps ?`)) { removeProject(initial.id); onDone(); } }}>Supprimer</Button>}
+        <Button type="button" className="ml-auto" onClick={onDone}>Annuler</Button>
+        <Button variant="primary">{initial ? "Enregistrer" : "Ajouter"}</Button>
+      </div>
     </form>
   );
 }
@@ -41,6 +52,7 @@ export default function Projets() {
   const [drag, setDrag] = useState<string | null>(null);
   const [over, setOver] = useState<Column | null>(null);
   const [adding, setAdding] = useState<Column | null>(null);
+  const [editing, setEditing] = useState<Project | null>(null);
   const week = weekMinutes(time).reduce((a, d) => a + d.value, 0);
   const billable = time.filter((t) => t.billable && weekMinutes(time).some((d) => d.iso === t.date)).reduce((a, t) => a + t.minutes, 0);
   const current = projects.find((p) => p.column === "doing");
@@ -93,7 +105,7 @@ export default function Projets() {
                         <span className="text-xs font-semibold text-ink-2">{cl?.name ?? "Perso"}</span>
                         <Pill tone="info">{p.tag}</Pill>
                       </div>
-                      <p className="font-semibold">{p.title}</p>
+                      <button onClick={() => setEditing(p)} className="text-left font-semibold hover:text-bright">{p.title}</button>
                       {p.column !== "done" && p.progress > 0 && <div className="mt-3"><Progress value={p.progress} /></div>}
                       <div className="mt-3 flex items-center justify-between text-xs text-ink-2">
                         <span className={clsx("flex items-center gap-1", p.column !== "done" && n <= 3 && "font-semibold text-down")}><CalendarDays size={13} />{shortDate(p.due)}</span>
@@ -114,8 +126,9 @@ export default function Projets() {
           );
         })}
       </div>
-      <p className="mt-3 text-xs text-ink-2">Glisse une carte d&apos;une colonne à l&apos;autre pour changer son statut.</p>
-      <Modal open={adding !== null} onClose={() => setAdding(null)} title="Nouveau projet">{adding && <NewProject column={adding} onDone={() => setAdding(null)} />}</Modal>
+      <p className="mt-3 text-xs text-ink-2">Glisse une carte d&apos;une colonne à l&apos;autre pour changer son statut. Clique sur son titre pour la modifier.</p>
+      <Modal open={adding !== null} onClose={() => setAdding(null)} title="Nouveau projet">{adding && <ProjectForm column={adding} onDone={() => setAdding(null)} />}</Modal>
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title="Modifier le projet">{editing && <ProjectForm key={editing.id} column={editing.column} initial={editing} onDone={() => setEditing(null)} />}</Modal>
     </>
   );
 }

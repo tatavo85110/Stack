@@ -1,42 +1,29 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Plus, ExternalLink } from "lucide-react";
 import { useStack } from "@/lib/store";
-import { Button, ButtonLink, Card, Field, Kpi, Modal, PageHeader, Segmented, Status, inputCls, Pill } from "@/components/ui";
+import { Button, ButtonLink, Card, Empty, Kpi, Modal, PageHeader, Segmented, Status, Pill } from "@/components/ui";
+import { AppForm } from "@/components/AppForm";
 import { daysUntil, initialsOf, num } from "@/lib/format";
 import { deadlines } from "@/lib/stats";
 
 type Filter = "all" | "clients" | "perso";
 
-function AddApp({ onDone }: { onDone: () => void }) {
-  const { clients, addApp } = useStack();
-  const [f, setF] = useState({ name: "", url: "https://", stack: "Next.js 15", host: "Vercel", clientId: "" });
-  return (
-    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (!f.name.trim()) return; addApp({ ...f, clientId: f.clientId || undefined }); onDone(); }}>
-      <Field label="Nom"><input className={inputCls} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required /></Field>
-      <Field label="Adresse"><input className={inputCls} value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} /></Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Techno"><input className={inputCls} value={f.stack} onChange={(e) => setF({ ...f, stack: e.target.value })} /></Field>
-        <Field label="Hébergeur"><input className={inputCls} value={f.host} onChange={(e) => setF({ ...f, host: e.target.value })} /></Field>
-      </div>
-      <Field label="Client">
-        <select className={inputCls} value={f.clientId} onChange={(e) => setF({ ...f, clientId: e.target.value })}>
-          <option value="">Perso</option>
-          {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </Field>
-      <div className="flex justify-end gap-2"><Button type="button" onClick={onDone}>Annuler</Button><Button variant="primary">Ajouter</Button></div>
-    </form>
-  );
+export default function Page() {
+  return <Suspense><Applis /></Suspense>;
 }
 
-export default function Applis() {
+function Applis() {
   const { apps, clients } = useStack();
   const [filter, setFilter] = useState<Filter>("all");
   const [adding, setAdding] = useState(false);
+  const params = useSearchParams();
+  useEffect(() => { if (params.get("ajout")) setAdding(true); }, [params]);
   const list = apps.filter((a) => (filter === "all" ? true : filter === "clients" ? a.clientId : !a.clientId));
-  const avgUptime = apps.reduce((a, x) => a + x.uptime, 0) / apps.length;
+  const measured = apps.filter((a) => a.uptime >= 0);
+  const avgUptime = measured.length ? measured.reduce((a, x) => a + x.uptime, 0) / measured.length : null;
   const soon = deadlines(apps, 30).length;
   const featured = apps.find((a) => a.status === "down") ?? apps[0];
 
@@ -61,8 +48,8 @@ export default function Applis() {
         }
       />
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi tone="night" label="En ligne" value={`${apps.filter((a) => a.status !== "down").length} / ${apps.length}`} />
-        <Kpi label="Dispo moyenne 30 j" value={`${num(avgUptime, 2)} %`} />
+        <Kpi tone="night" label="En ligne" value={apps.length ? `${apps.filter((a) => a.status !== "down").length} / ${apps.length}` : "—"} />
+        <Kpi label="Dispo moyenne 30 j" value={avgUptime === null ? "—" : `${num(avgUptime, 2)} %`} />
         <Kpi tone="ice" label="Échéances sous 30 j" value={soon} />
         <Kpi tone="plain" label="Erreurs sur 7 j" value={apps.reduce((a, x) => a + x.errors7d, 0)} />
       </div>
@@ -89,12 +76,13 @@ export default function Applis() {
                       </td>
                       <td className="px-5 py-3 text-ink-2">{clients.find((c) => c.id === a.clientId)?.name ?? "Perso"}</td>
                       <td className="px-5 py-3 text-ink-2">{a.stack} · {a.host}</td>
-                      <td className="px-5 py-3 font-semibold">{num(a.uptime, 2)} %</td>
+                      <td className="px-5 py-3 font-semibold">{a.uptime >= 0 ? `${num(a.uptime, 2)} %` : "—"}</td>
                       <td className="px-5 py-3">{n !== null ? <Pill tone={n <= 7 ? "down" : n <= 30 ? "warn" : "neutral"}>J-{n}</Pill> : "—"}</td>
                       <td className="px-5 py-3"><Status s={a.status} /></td>
                     </tr>
                   );
                 })}
+                {!list.length && <tr><td colSpan={6} className="p-5"><Empty>Aucune appli pour l&apos;instant. <button className="font-semibold text-bright" onClick={() => setAdding(true)}>Ajouter une appli</button></Empty></td></tr>}
               </tbody>
             </table>
           </div>
@@ -114,7 +102,7 @@ export default function Applis() {
           </Card>
         )}
       </div>
-      <Modal open={adding} onClose={() => setAdding(false)} title="Nouvelle appli"><AddApp onDone={() => setAdding(false)} /></Modal>
+      <Modal open={adding} onClose={() => setAdding(false)} title="Nouvelle appli"><AppForm onDone={() => setAdding(false)} /></Modal>
     </>
   );
 }

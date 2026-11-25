@@ -1,11 +1,13 @@
 "use client";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { ClientForm } from "@/components/ClientForm";
 import Link from "next/link";
-import { Mail, Phone, ExternalLink, Check } from "lucide-react";
+import { Mail, Phone, ExternalLink, Check, Pencil, Plus } from "lucide-react";
 import { useStack } from "@/lib/store";
 import type { Stage } from "@/lib/types";
-import { Avatar, Button, ButtonLink, Card, Empty, Kpi, PageHeader, Pill, inputCls } from "@/components/ui";
+import { Avatar, Button, ButtonLink, Card, Empty, Kpi, Modal, PageHeader, Pill, inputCls } from "@/components/ui";
+import { isoIn } from "@/lib/format";
 import { AppRow } from "@/components/blocks";
 import { eur, initialsOf, shortDate, INDY_URL } from "@/lib/format";
 import { clientTotal } from "@/lib/stats";
@@ -18,11 +20,14 @@ export default function Page() {
 
 function ClientPage() {
   const id = useSearchParams().get("id") ?? "";
-  const { clients, apps, contracts, setClientStage, completeNextAction } = useStack();
+  const { clients, apps, setClientStage, completeNextAction, updateClient, addHistory } = useStack();
+  const router = useRouter();
+  const [edit, setEdit] = useState(false);
+  const [action, setAction] = useState({ label: "", date: isoIn(2) });
+  const [noteText, setNoteText] = useState("");
   const c = clients.find((x) => x.id === id);
   if (!c) return <Empty>Ce client n&apos;existe pas. <Link className="text-bright" href="/clients">Retour aux clients</Link></Empty>;
   const since12 = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10);
-  const contract = contracts.find((m) => m.clientId === c.id);
   const paid = c.invoices.length;
 
   return (
@@ -32,6 +37,7 @@ function ClientPage() {
         title={c.name}
         actions={
           <>
+            <Button onClick={() => setEdit(true)}><Pencil size={15} /> Modifier</Button>
             {c.email && <ButtonLink href={`mailto:${c.email}`} external><Mail size={15} /> Écrire un e-mail</ButtonLink>}
             <ButtonLink href={INDY_URL} external variant="primary">Nouveau devis dans Indy <ExternalLink size={14} /></ButtonLink>
           </>
@@ -48,7 +54,7 @@ function ClientPage() {
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi tone="night" label="CA total" value={eur(clientTotal(c))} hint={`${paid} facture${paid > 1 ? "s" : ""}`} />
         <Kpi label="CA 12 mois" value={eur(c.invoices.filter((i) => i.date >= since12).reduce((a, i) => a + i.amount, 0))} />
-        <Kpi tone="ice" label="Maintenance" value={contract ? `${contract.monthly} € / mois` : "Aucune"} />
+        <Kpi tone="ice" label="Dernière facture" value={c.invoices.length ? shortDate([...c.invoices].sort((a, b) => b.date.localeCompare(a.date))[0].date) : "—"} />
         <Kpi tone="plain" label="Devis en cours" value={c.quoteAmount && c.stage !== "Actif" ? eur(c.quoteAmount) : "—"} />
       </div>
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
@@ -70,6 +76,10 @@ function ClientPage() {
             {!apps.some((a) => a.clientId === c.id) && <Empty>Aucune appli pour ce client.</Empty>}
           </Card>
           <Card title="Historique">
+            <form className="mb-5 flex gap-2" onSubmit={(e) => { e.preventDefault(); if (noteText.trim()) { addHistory(c.id, noteText.trim()); setNoteText(""); } }}>
+              <input value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Ajouter une note (appel, rendez-vous…)" className={inputCls} />
+              <Button variant="primary" aria-label="Ajouter la note"><Plus size={16} /></Button>
+            </form>
             <ol className="relative space-y-4 border-l-2 border-line pl-5">
               {c.history.map((h, i) => (
                 <li key={i} className="relative">
@@ -90,7 +100,13 @@ function ClientPage() {
                 <p className="text-sm text-ink-2">le {shortDate(c.nextAction.date)}</p>
                 <Button variant="primary" className="mt-4 w-full" onClick={() => completeNextAction(c.id)}><Check size={16} /> Marquer comme fait</Button>
               </>
-            ) : <p className="text-sm text-ink-2">Aucune action prévue.</p>}
+            ) : (
+              <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); if (action.label.trim()) { updateClient(c.id, { nextAction: { label: action.label.trim(), date: action.date } }); setAction({ label: "", date: isoIn(2) }); } }}>
+                <input value={action.label} onChange={(e) => setAction({ ...action, label: e.target.value })} placeholder="Ex. Relancer le devis" className={inputCls} />
+                <input type="date" value={action.date} onChange={(e) => setAction({ ...action, date: e.target.value })} className={inputCls} />
+                <Button variant="primary" className="w-full">Planifier</Button>
+              </form>
+            )}
           </Card>
           <Card title="Factures (depuis Indy)">
             <ul className="max-h-72 space-y-2 overflow-y-auto">
@@ -102,6 +118,7 @@ function ClientPage() {
           </Card>
         </div>
       </div>
+      <Modal open={edit} onClose={() => setEdit(false)} title="Modifier le client"><ClientForm initial={c} onDone={() => setEdit(false)} onDeleted={() => router.push("/clients")} /></Modal>
     </>
   );
 }

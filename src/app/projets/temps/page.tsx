@@ -34,6 +34,7 @@ export default function Temps() {
   const [adding, setAdding] = useState(false);
   const [pick, setPick] = useState(projects.find((p) => p.column === "doing")?.id ?? projects[0]?.id ?? "");
   const [label, setLabel] = useState("");
+  const cur = pick || projects.find((p) => p.column !== "done")?.id || "";
   const elapsed = useElapsed(timer?.startedAt);
   const week = weekMinutes(time);
   const weekIsos = new Set(week.map((d) => d.iso));
@@ -55,12 +56,13 @@ export default function Temps() {
           </>
         ) : (
           <>
-            <select value={pick} onChange={(e) => setPick(e.target.value)} className="rounded-xl bg-white/10 px-3 py-2.5 text-sm font-semibold text-white outline-none [&>option]:text-ink">
+            <select value={cur} onChange={(e) => setPick(e.target.value)} className="rounded-xl bg-white/10 px-3 py-2.5 text-sm font-semibold text-white outline-none [&>option]:text-ink">
               {projects.filter((p) => p.column !== "done").map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
             </select>
             <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Sur quoi tu travailles ?" className="min-w-48 flex-1 rounded-xl bg-white/10 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/50 focus:bg-white/15" />
             <span className="font-mono text-3xl font-extrabold text-white/40 tabular-nums">00:00:00</span>
-            <Button variant="accent" onClick={() => pick && startTimer(pick, label || proj(pick)?.title || "Travail")}><Play size={13} fill="currentColor" /> Démarrer</Button>
+            <Button variant="accent" disabled={!cur} onClick={() => cur && startTimer(cur, label || proj(cur)?.title || "Travail")}><Play size={13} fill="currentColor" /> Démarrer</Button>
+            {!projects.length && <p className="w-full text-xs text-white/70">Crée d&apos;abord un projet dans l&apos;onglet Kanban pour pouvoir lancer le chrono.</p>}
           </>
         )}
       </section>
@@ -89,6 +91,7 @@ export default function Temps() {
                   </tr>
                 );
               })}
+              {!time.length && <tr><td colSpan={5} className="px-5 py-6 text-center text-ink-2">Aucune saisie pour l&apos;instant.</td></tr>}
             </tbody>
           </table>
         </div>

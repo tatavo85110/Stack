@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import clsx from "clsx";
-import { Search, Moon, Sun, ExternalLink } from "lucide-react";
+import { Search, Moon, Sun, ExternalLink, Settings } from "lucide-react";
 import { LogoIcon } from "./Logo";
 import { mainNav, topTabs, isActive } from "./nav";
 import { CommandPalette } from "./CommandPalette";
@@ -64,7 +64,9 @@ export function Shell({ children }: { children: ReactNode }) {
           <a href={INDY_URL} target="_blank" rel="noreferrer" title="Ouvrir Indy" className="flex size-11 items-center justify-center rounded-xl bg-bright text-xs font-extrabold text-white transition-transform hover:scale-105">
             IN
           </a>
-          <span className="flex size-10 items-center justify-center rounded-full bg-night-2 text-sm font-bold text-white">M</span>
+          <Link href="/reglages" title="Réglages" aria-label="Réglages" className={clsx("flex size-11 items-center justify-center rounded-xl transition-colors", path.startsWith("/reglages") ? "bg-sky text-night" : "text-[#a9bdd8] hover:bg-night-2 hover:text-white")}>
+            <Settings size={20} />
+          </Link>
         </div>
       </aside>
 
@@ -101,6 +103,9 @@ export function Shell({ children }: { children: ReactNode }) {
             <button onClick={toggleTheme} className="rounded-xl border border-line bg-surface p-2 text-ink-2 shadow-card transition-colors hover:text-ink" aria-label="Changer de thème">
               {hydrated && theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+            <Link href="/reglages" className="rounded-xl border border-line bg-surface p-2 text-ink-2 shadow-card transition-colors hover:text-ink md:hidden" aria-label="Réglages">
+              <Settings size={18} />
+            </Link>
             <a href={INDY_URL} target="_blank" rel="noreferrer" className="hidden items-center gap-1.5 rounded-xl bg-azure px-3 py-2 text-sm font-semibold text-azure-text transition-colors hover:bg-sky hover:text-night lg:flex">
               Indy <ExternalLink size={14} />
             </a>

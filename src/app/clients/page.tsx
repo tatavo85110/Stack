@@ -1,48 +1,31 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { ClientForm, STAGES } from "@/components/ClientForm";
 import Link from "next/link";
 import { Plus, Search, Download } from "lucide-react";
 import { useStack } from "@/lib/store";
-import type { Client, Stage } from "@/lib/types";
-import { Avatar, Button, Card, Field, Kpi, Modal, PageHeader, Pill, Segmented, inputCls } from "@/components/ui";
+import type { Stage } from "@/lib/types";
+import { Avatar, Button, Card, Empty, Kpi, Modal, PageHeader, Pill, Segmented, inputCls } from "@/components/ui";
 import { Bars } from "@/components/charts";
 import { IndyImportButton } from "@/components/IndyImport";
 import { eur, initialsOf, num, shortDate } from "@/lib/format";
-import { averageBasket, clientTotal, conversionRate, recurring, revenueByMonth } from "@/lib/stats";
+import { averageBasket, clientTotal, conversionRate, monthlyAverage, revenueByMonth } from "@/lib/stats";
 
-const STAGES: Stage[] = ["Prospect", "Devis envoyé", "Signé", "Actif", "Perdu"];
 const stageTone = (s: Stage) => (s === "Actif" ? "ok" : s === "Signé" ? "info" : s === "Perdu" ? "down" : s === "Devis envoyé" ? "warn" : "neutral") as "ok";
 
-function NewClient({ onDone }: { onDone: () => void }) {
-  const addClient = useStack((s) => s.addClient);
-  const [f, setF] = useState({ name: "", contact: "", email: "", phone: "", sector: "", source: "Bouche-à-oreille" as Client["source"], stage: "Prospect" as Stage });
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
-  return (
-    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (f.name.trim()) { addClient(f); onDone(); } }}>
-      <Field label="Entreprise"><input className={inputCls} value={f.name} onChange={set("name")} required /></Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Contact"><input className={inputCls} value={f.contact} onChange={set("contact")} /></Field>
-        <Field label="Secteur"><input className={inputCls} value={f.sector} onChange={set("sector")} /></Field>
-        <Field label="E-mail"><input type="email" className={inputCls} value={f.email} onChange={set("email")} /></Field>
-        <Field label="Téléphone"><input className={inputCls} value={f.phone} onChange={set("phone")} /></Field>
-        <Field label="Origine">
-          <select className={inputCls} value={f.source} onChange={set("source")}>{["Bouche-à-oreille", "Site web", "LinkedIn", "Malt", "Réseau"].map((s) => <option key={s}>{s}</option>)}</select>
-        </Field>
-        <Field label="Étape">
-          <select className={inputCls} value={f.stage} onChange={set("stage")}>{STAGES.map((s) => <option key={s}>{s}</option>)}</select>
-        </Field>
-      </div>
-      <div className="flex justify-end gap-2"><Button type="button" onClick={onDone}>Annuler</Button><Button variant="primary">Créer le client</Button></div>
-    </form>
-  );
+export default function Page() {
+  return <Suspense><Clients /></Suspense>;
 }
 
-export default function Clients() {
-  const { clients, contracts, setClientStage } = useStack();
+function Clients() {
+  const { clients, setClientStage } = useStack();
   const [view, setView] = useState<"liste" | "pipeline">("liste");
   const [q, setQ] = useState("");
   const [stage, setStage] = useState<"" | Stage>("");
   const [adding, setAdding] = useState(false);
+  const params = useSearchParams();
+  useEffect(() => { if (params.get("ajout")) setAdding(true); }, [params]);
   const [drag, setDrag] = useState<string | null>(null);
   const list = clients.filter((c) => (!stage || c.stage === stage) && (c.name + c.contact + c.sector).toLowerCase().includes(q.toLowerCase()));
   const months = revenueByMonth(clients, 12);
@@ -74,7 +57,7 @@ export default function Clients() {
         <Kpi tone="night" label="Clients actifs" value={clients.filter((c) => c.stage === "Actif" || c.stage === "Signé").length} />
         <Kpi label="Panier moyen" value={eur(averageBasket(clients))} />
         <Kpi tone="ice" label="Taux de conversion" value={`${num(conversionRate(clients))} %`} />
-        <Kpi tone="plain" label="CA récurrent / mois" value={eur(recurring(contracts))} />
+        <Kpi tone="plain" label="CA moyen / mois" value={eur(monthlyAverage(clients))} />
       </div>
 
       {view === "liste" ? (
@@ -125,6 +108,7 @@ export default function Clients() {
                       <td className="px-5 py-3 text-ink-2">{c.nextAction ? `${c.nextAction.label} · ${shortDate(c.nextAction.date)}` : "—"}</td>
                     </tr>
                   ))}
+                  {!list.length && <tr><td colSpan={5} className="p-5"><Empty>{clients.length ? "Aucun client ne correspond." : <>Aucun client pour l&apos;instant. <button className="font-semibold text-bright" onClick={() => setAdding(true)}>Créer un client</button> ou importe un export Indy.</>}</Empty></td></tr>}
                 </tbody>
               </table>
             </div>
@@ -147,7 +131,7 @@ export default function Clients() {
           ))}
         </div>
       )}
-      <Modal open={adding} onClose={() => setAdding(false)} title="Nouveau client"><NewClient onDone={() => setAdding(false)} /></Modal>
+      <Modal open={adding} onClose={() => setAdding(false)} title="Nouveau client"><ClientForm onDone={() => setAdding(false)} /></Modal>
     </>
   );
 }

@@ -1,11 +1,12 @@
 "use client";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { useState } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Pencil } from "lucide-react";
+import { AppForm } from "@/components/AppForm";
 import { useStack } from "@/lib/store";
-import { ButtonLink, Card, Empty, Kpi, PageHeader, Pill, Segmented, Status } from "@/components/ui";
+import { Button, ButtonLink, Card, Empty, Kpi, Modal, PageHeader, Pill, Segmented, Status } from "@/components/ui";
 import { Line, UptimeStrip } from "@/components/charts";
 import { daysUntil, num, shortDate } from "@/lib/format";
 
@@ -19,8 +20,9 @@ function AppPage() {
   const id = useSearchParams().get("id") ?? "";
   const app = useStack((s) => s.apps.find((a) => a.id === id));
   const client = useStack((s) => s.clients.find((c) => c.id === app?.clientId));
-  const contract = useStack((s) => s.contracts.find((c) => c.clientId === app?.clientId));
   const [tab, setTab] = useState<Tab>("apercu");
+  const [edit, setEdit] = useState(false);
+  const router = useRouter();
   if (!app) return <Empty>Cette appli n&apos;existe pas. <Link className="text-bright" href="/applis">Retour aux applis</Link></Empty>;
 
   const dl = [
@@ -34,7 +36,7 @@ function AppPage() {
       <PageHeader
         crumbs={[{ label: "Stack", href: "/" }, { label: "Applis", href: "/applis" }, { label: app.name }]}
         title={app.name}
-        actions={<><ButtonLink href={app.url} external>Ouvrir le site <ExternalLink size={14} /></ButtonLink><ButtonLink href="https://vercel.com/dashboard" external variant="primary">Déployer</ButtonLink></>}
+        actions={<><Button onClick={() => setEdit(true)}><Pencil size={15} /> Modifier</Button><ButtonLink href={app.url} external variant="primary">Ouvrir le site <ExternalLink size={14} /></ButtonLink></>}
       />
       <div className="-mt-3 mb-5 flex flex-wrap items-center gap-2">
         <Status s={app.status} />
@@ -49,17 +51,16 @@ function AppPage() {
       {tab === "apercu" && (
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi tone="night" label="Disponibilité 30 j" value={`${num(app.uptime, 2)} %`} />
+            <Kpi tone="night" label="Disponibilité 30 j" value={app.uptime >= 0 ? `${num(app.uptime, 2)} %` : "—"} />
             <Kpi label="Temps de réponse" value={app.responseMs ? `${app.responseMs} ms` : "—"} />
             <Kpi tone="ice" label="Erreurs 7 j" value={app.errors7d} />
             <Kpi tone="plain" label="Dernier déploiement" value={app.deploys[0] ? shortDate(app.deploys[0].date) : "—"} />
           </div>
           <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-            <Card title="Temps de réponse, 24 h"><Line values={app.responseSeries} height={180} /></Card>
+            <Card title="Temps de réponse, 24 h">{app.responseSeries.length ? <Line values={app.responseSeries} height={180} /> : <Empty>Pas encore de mesure.</Empty>}</Card>
             <Card title="Disponibilité, 30 jours">
-              <UptimeStrip values={app.uptimeSeries} />
-              <p className="mt-3 text-xs text-ink-2">Chaque case est un jour. Vert : en ligne toute la journée.</p>
-              <p className="mt-4 rounded-xl bg-muted p-3 text-xs text-ink-2">Données d&apos;exemple. Le vrai monitoring (ping toutes les 5 min) arrive avec la base de données.</p>
+              {app.uptimeSeries.length ? <><UptimeStrip values={app.uptimeSeries} /><p className="mt-3 text-xs text-ink-2">Chaque case est un jour. Vert : en ligne toute la journée.</p></> : <Empty>Pas encore de mesure.</Empty>}
+              <p className="mt-4 rounded-xl bg-muted p-3 text-xs text-ink-2">Le monitoring automatique (vérification du site toutes les 5 min) n&apos;est pas encore branché. En attendant, règle l&apos;état avec « Modifier ».</p>
             </Card>
           </div>
         </div>
@@ -97,13 +98,9 @@ function AppPage() {
               {!dl.length && <Empty>Aucune échéance renseignée.</Empty>}
             </ul>
           </Card>
-          <Card title="Contrat de maintenance">
-            {contract ? (
-              <>
-                <p className="text-sm">{contract.hoursIncluded} h incluses par mois, {contract.monthly} € / mois.</p>
-                <ButtonLink href="/projets/maintenance" className="mt-4">Voir le contrat</ButtonLink>
-              </>
-            ) : <Empty>Pas de contrat pour cette appli.</Empty>}
+          <Card title="Rappels">
+            <p className="text-sm text-ink-2">Les échéances à moins de 45 jours apparaissent sur ton accueil. Change les dates avec « Modifier ».</p>
+            <Button className="mt-4" onClick={() => setEdit(true)}><Pencil size={15} /> Modifier les dates</Button>
           </Card>
         </div>
       )}
@@ -118,6 +115,7 @@ function AppPage() {
           <p className="mt-5 rounded-xl bg-warn-bg p-3 text-xs text-warn">Ne mets jamais de mot de passe ici : garde-les dans ton gestionnaire de mots de passe.</p>
         </Card>
       )}
+      <Modal open={edit} onClose={() => setEdit(false)} title="Modifier l'appli"><AppForm initial={app} onDone={() => setEdit(false)} onDeleted={() => router.push("/applis")} /></Modal>
     </>
   );
 }

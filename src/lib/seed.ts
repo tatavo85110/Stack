@@ -1,4 +1,4 @@
-import type { App, Client, Contract, Project, Shortcut, TimeEntry, Todo } from "./types";
+import type { App, Client, Project, Shortcut, TimeEntry, Todo } from "./types";
 
 const day = 86_400_000;
 export const isoIn = (days: number) => new Date(Date.now() + days * day).toISOString().slice(0, 10);
@@ -107,13 +107,6 @@ export const seedTime: TimeEntry[] = [
   { id: "t6", projectId: "p3", label: "Atelier avec Inès", date: isoIn(-2), minutes: 60, billable: true },
   { id: "t7", projectId: "p5", label: "Modèle PDF", date: isoIn(-3), minutes: 110, billable: true },
   { id: "t8", projectId: "p6", label: "Lazy loading", date: isoIn(-3), minutes: 45, billable: true },
-];
-
-export const seedContracts: Contract[] = [
-  { id: "m1", clientId: "c1", monthly: 180, hoursIncluded: 4, hoursUsed: 2.5, renewal: isoIn(95), interventions: [{ date: isoIn(-3), label: "Mise à jour sécurité", minutes: 60 }, { date: isoIn(-12), label: "Ajout d'un praticien", minutes: 90 }] },
-  { id: "m2", clientId: "c2", monthly: 120, hoursIncluded: 3, hoursUsed: 2.75, renewal: isoIn(140), interventions: [{ date: isoIn(-1), label: "Changement des horaires", minutes: 45 }, { date: isoIn(-8), label: "Photos de la carte", minutes: 120 }] },
-  { id: "m3", clientId: "c3", monthly: 150, hoursIncluded: 3, hoursUsed: 1, renewal: isoIn(20), interventions: [{ date: isoIn(-6), label: "Nouvel utilisateur", minutes: 60 }] },
-  { id: "m4", clientId: "c4", monthly: 60, hoursIncluded: 1, hoursUsed: 0.25, renewal: isoIn(200), interventions: [{ date: isoIn(-15), label: "Mise à jour WordPress", minutes: 15 }] },
 ];
 
 export const seedTodos: Todo[] = [
