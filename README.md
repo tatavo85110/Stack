@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stack
 
-## Getting Started
+Le cockpit de Mathéo : applis, clients, projets, temps, contrats de maintenance et raccourcis au même endroit.
+La facturation et la compta restent dans [Indy](https://app.indy.fr) : Stack ne fait que lire tes exports et ouvrir Indy.
 
-First, run the development server:
+## Lancer l'appli
+
+Il faut Node.js 20 ou plus récent.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Puis ouvre http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Ce qu'il y a dans cette version
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Accueil** : chiffres clés, raccourcis, semaine, échéances, applis, tâches du jour, CA, projet en cours, pipeline, prochain rendez-vous, maintenance à facturer.
+- **Recherche ⌘K** (ou Ctrl+K) : clients, applis, projets, raccourcis et actions rapides.
+- **Raccourcis** : ajout, modification, groupes, import d'un favicon (.ico, .png, .svg) ou initiales + couleur.
+- **Applis** : catalogue, état, disponibilité, temps de réponse, déploiements, échéances (domaine, SSL, hébergement).
+- **Clients** : liste, pipeline par glisser-déposer, fiche client, export CSV.
+- **Statistiques** : 10 indicateurs (CA, récurrent, panier moyen, conversion, délai de signature, évolution, CA par client, sources, fidélité, taux horaire réel).
+- **Import Indy** : exporte tes factures en CSV depuis Indy et glisse le fichier dans Stack (Clients ou Stats). Les doublons sont ignorés. Pas de connexion bancaire.
+- **Projets** : kanban par glisser-déposer, chrono, suivi du temps, contrats de maintenance.
+- **Thème clair et sombre**, version mobile avec barre d'onglets en bas.
 
-## Learn More
+## Données
 
-To learn more about Next.js, take a look at the following resources:
+Cette première version n'a pas de base de données : elle démarre avec des données d'exemple et garde tes changements dans le navigateur (localStorage). Vider les données du site remet les données d'exemple.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Étape suivante prévue : base Supabase (Postgres) avec connexion, puis vrai monitoring des sites (ping régulier).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Technique
 
-## Deploy on Vercel
+Next.js 15 (App Router), TypeScript, Tailwind CSS v4, Zustand, lucide-react. Police Plus Jakarta Sans.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/app          pages (accueil, applis, clients, projets, raccourcis)
+src/components   coque (barre latérale, barre du haut, ⌘K), composants UI, graphiques
+src/lib          types, données d'exemple, store, calcul des stats, lecture des exports Indy
+```
