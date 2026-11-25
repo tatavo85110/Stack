@@ -161,6 +161,11 @@ drop policy if exists "inbox_suppression" on public.stack_inbox;
 create policy "inbox_depot" on public.stack_inbox for insert to anon with check (true);
 create policy "inbox_lecture" on public.stack_inbox for select to authenticated using (true);
 create policy "inbox_suppression" on public.stack_inbox for delete to authenticated using (true);
+
+-- Droits d'accès (les règles ci-dessus filtrent ensuite les lignes).
+grant select, insert, update, delete on public.stack_state to authenticated;
+grant select, delete on public.stack_inbox to authenticated;
+grant insert on public.stack_inbox to anon;
 `;
 }
 
