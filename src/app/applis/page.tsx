@@ -82,7 +82,7 @@ export default function Applis() {
                   return (
                     <tr key={a.id} className="group border-b border-line/60 last:border-0">
                       <td className="px-5 py-3">
-                        <Link href={`/applis/${a.id}`} className="flex items-center gap-3 font-semibold group-hover:text-bright">
+                        <Link href={`/applis/fiche?id=${a.id}`} className="flex items-center gap-3 font-semibold group-hover:text-bright">
                           <span className="flex size-8 items-center justify-center rounded-lg bg-azure text-[11px] font-bold text-azure-text">{initialsOf(a.name)}</span>
                           {a.name}
                         </Link>
@@ -108,7 +108,7 @@ export default function Applis() {
               <div className="flex items-center justify-between"><span className="text-ink-2">Erreurs 7 j</span><span className="font-semibold">{featured.errors7d}</span></div>
             </div>
             <div className="mt-5 flex flex-col gap-2">
-              <ButtonLink href={`/applis/${featured.id}`} variant="primary">Ouvrir la fiche</ButtonLink>
+              <ButtonLink href={`/applis/fiche?id=${featured.id}`} variant="primary">Ouvrir la fiche</ButtonLink>
               <ButtonLink href={featured.url} external>Ouvrir le site <ExternalLink size={14} /></ButtonLink>
             </div>
           </Card>

@@ -40,7 +40,7 @@ export default function Home() {
       </div>
 
       {down.length > 0 && (
-        <Link href={`/applis/${down[0].id}`} className="animate-pop flex items-center gap-3 rounded-2xl bg-down-bg px-4 py-3 text-sm font-semibold text-down transition-opacity hover:opacity-90">
+        <Link href={`/applis/fiche?id=${down[0].id}`} className="animate-pop flex items-center gap-3 rounded-2xl bg-down-bg px-4 py-3 text-sm font-semibold text-down transition-opacity hover:opacity-90">
           <AlertTriangle size={18} />
           {down[0].name} est hors ligne. Voir la fiche
           <ArrowRight size={16} className="ml-auto" />
@@ -145,7 +145,7 @@ export default function Home() {
         <Card title="Prochain rendez-vous client">
           {next ? (
             <div className="flex h-full flex-col">
-              <Link href={`/clients/${next.id}`} className="flex items-center gap-3 rounded-xl p-1 transition-colors hover:bg-muted">
+              <Link href={`/clients/fiche?id=${next.id}`} className="flex items-center gap-3 rounded-xl p-1 transition-colors hover:bg-muted">
                 <Avatar text={initialsOf(next.name)} />
                 <div>
                   <p className="text-sm font-bold">{next.name}</p>

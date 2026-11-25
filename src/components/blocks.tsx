@@ -22,7 +22,7 @@ export function ShortcutIcon({ s, size = 40 }: { s: Shortcut; size?: number }) {
 export function AppRow({ app }: { app: App }) {
   const client = useStack((s) => s.clients.find((c) => c.id === app.clientId));
   return (
-    <Link href={`/applis/${app.id}`} className="flex items-center gap-3 rounded-xl border border-transparent p-2.5 transition-[border-color,background,box-shadow] duration-150 hover:border-bright hover:bg-muted/60 hover:shadow-sm">
+    <Link href={`/applis/fiche?id=${app.id}`} className="flex items-center gap-3 rounded-xl border border-transparent p-2.5 transition-[border-color,background,box-shadow] duration-150 hover:border-bright hover:bg-muted/60 hover:shadow-sm">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-azure text-xs font-bold text-azure-text">{initialsOf(app.name)}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold">{app.name}</span>

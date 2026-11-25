@@ -1,5 +1,6 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import { Mail, Phone, ExternalLink, Check } from "lucide-react";
 import { useStack } from "@/lib/store";
@@ -11,8 +12,12 @@ import { clientTotal } from "@/lib/stats";
 
 const STAGES: Stage[] = ["Prospect", "Devis envoyé", "Signé", "Actif", "Perdu"];
 
-export default function ClientPage() {
-  const { id } = useParams<{ id: string }>();
+export default function Page() {
+  return <Suspense><ClientPage /></Suspense>;
+}
+
+function ClientPage() {
+  const id = useSearchParams().get("id") ?? "";
   const { clients, apps, contracts, setClientStage, completeNextAction } = useStack();
   const c = clients.find((x) => x.id === id);
   if (!c) return <Empty>Ce client n&apos;existe pas. <Link className="text-bright" href="/clients">Retour aux clients</Link></Empty>;

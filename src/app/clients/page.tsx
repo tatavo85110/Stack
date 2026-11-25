@@ -114,7 +114,7 @@ export default function Clients() {
                   {list.map((c) => (
                     <tr key={c.id} className="group border-b border-line/60 transition-colors last:border-0 hover:bg-muted/50">
                       <td className="px-5 py-3">
-                        <Link href={`/clients/${c.id}`} className="flex items-center gap-3">
+                        <Link href={`/clients/fiche?id=${c.id}`} className="flex items-center gap-3">
                           <Avatar text={initialsOf(c.name)} />
                           <span><span className="block font-semibold group-hover:text-bright">{c.name}</span><span className="text-xs text-ink-2">{c.contact}</span></span>
                         </Link>
@@ -137,7 +137,7 @@ export default function Clients() {
               <p className="mb-3 flex items-center justify-between px-1 text-sm font-bold">{s}<span className="text-ink-2">{clients.filter((c) => c.stage === s).length}</span></p>
               <div className="space-y-2">
                 {clients.filter((c) => c.stage === s).map((c) => (
-                  <Link key={c.id} href={`/clients/${c.id}`} draggable onDragStart={() => setDrag(c.id)} className="block cursor-grab rounded-xl border border-line bg-surface p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing">
+                  <Link key={c.id} href={`/clients/fiche?id=${c.id}`} draggable onDragStart={() => setDrag(c.id)} className="block cursor-grab rounded-xl border border-line bg-surface p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing">
                     <p className="text-sm font-semibold">{c.name}</p>
                     <p className="text-xs text-ink-2">{c.quoteAmount ? eur(c.quoteAmount) : c.sector}</p>
                   </Link>

@@ -1,5 +1,6 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
@@ -10,8 +11,12 @@ import { daysUntil, num, shortDate } from "@/lib/format";
 
 type Tab = "apercu" | "deploiements" | "echeances" | "notes";
 
-export default function AppPage() {
-  const { id } = useParams<{ id: string }>();
+export default function Page() {
+  return <Suspense><AppPage /></Suspense>;
+}
+
+function AppPage() {
+  const id = useSearchParams().get("id") ?? "";
   const app = useStack((s) => s.apps.find((a) => a.id === id));
   const client = useStack((s) => s.clients.find((c) => c.id === app?.clientId));
   const contract = useStack((s) => s.contracts.find((c) => c.clientId === app?.clientId));
@@ -35,7 +40,7 @@ export default function AppPage() {
         <Status s={app.status} />
         <Pill>{app.stack}</Pill>
         <Pill>{app.host}</Pill>
-        {client ? <Link href={`/clients/${client.id}`}><Pill tone="info">Client : {client.name}</Pill></Link> : <Pill>Perso</Pill>}
+        {client ? <Link href={`/clients/fiche?id=${client.id}`}><Pill tone="info">Client : {client.name}</Pill></Link> : <Pill>Perso</Pill>}
       </div>
       <div className="mb-5">
         <Segmented<Tab> value={tab} onChange={setTab} options={[{ value: "apercu", label: "Vue d'ensemble" }, { value: "deploiements", label: "Déploiements" }, { value: "echeances", label: "Échéances" }, { value: "notes", label: "Accès et notes" }]} />

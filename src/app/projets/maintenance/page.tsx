@@ -32,7 +32,7 @@ export default function Maintenance() {
           return (
             <Card key={c.id}>
               <div className="mb-3 flex items-start justify-between gap-2">
-                <Link href={`/clients/${c.clientId}`} className="font-bold hover:text-bright">{cl?.name}</Link>
+                <Link href={`/clients/fiche?id=${c.clientId}`} className="font-bold hover:text-bright">{cl?.name}</Link>
                 <Pill tone={s.tone}>{s.label}</Pill>
               </div>
               <p className="text-2xl font-extrabold">{c.monthly} € <span className="text-sm font-medium text-ink-2">/ mois</span></p>

@@ -32,8 +32,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const icon = (I: typeof Play) => <span className="flex size-8 items-center justify-center rounded-lg bg-azure text-azure-text"><I size={16} /></span>;
     const doing = projects.find((p) => p.column === "doing");
     const all: Item[] = [
-      ...clients.map((c) => ({ id: "c" + c.id, group: "Clients", label: c.name, hint: c.stage, badge: badge(initialsOf(c.name)), run: go(`/clients/${c.id}`) })),
-      ...apps.map((a) => ({ id: "a" + a.id, group: "Applis", label: a.name, hint: a.url.replace(/^https?:\/\//, ""), badge: badge(initialsOf(a.name)), run: go(`/applis/${a.id}`) })),
+      ...clients.map((c) => ({ id: "c" + c.id, group: "Clients", label: c.name, hint: c.stage, badge: badge(initialsOf(c.name)), run: go(`/clients/fiche?id=${c.id}`) })),
+      ...apps.map((a) => ({ id: "a" + a.id, group: "Applis", label: a.name, hint: a.url.replace(/^https?:\/\//, ""), badge: badge(initialsOf(a.name)), run: go(`/applis/fiche?id=${a.id}`) })),
       ...projects.map((p) => ({ id: "p" + p.id, group: "Projets", label: p.title, hint: clients.find((c) => c.id === p.clientId)?.name ?? "Perso", badge: badge(initialsOf(p.title)), run: go(`/projets`) })),
       ...shortcuts.map((s) => ({
         id: "s" + s.id, group: "Raccourcis", label: s.name, hint: s.url.replace(/^https?:\/\//, ""),
