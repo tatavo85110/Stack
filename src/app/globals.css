@@ -91,3 +91,9 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 .animate-slide-up { animation: slide-up 260ms cubic-bezier(.2,.8,.2,1) both; }
 .page-enter { animation: pop-in 220ms cubic-bezier(.2,.8,.2,1) both; }
 @media (prefers-reduced-motion: reduce) { .animate-pop, .animate-fade, .animate-slide-up, .page-enter { animation: none; } }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff !important; }
+  main { padding: 0 !important; max-width: none !important; }
+}

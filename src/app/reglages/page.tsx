@@ -1,11 +1,31 @@
 "use client";
 import { useRef, useState } from "react";
-import { Download, Upload, Trash2, Sparkles, Moon, Sun } from "lucide-react";
+import { Download, Upload, Trash2, Sparkles, Moon, Sun, Bell } from "lucide-react";
+import { SyncCard } from "@/components/SyncCard";
+import type { Settings } from "@/lib/types";
 import { useStack } from "@/lib/store";
-import { Button, Card, PageHeader } from "@/components/ui";
+import { Button, Card, Field, PageHeader, inputCls } from "@/components/ui";
 
 export default function Reglages() {
-  const { theme, toggleTheme, exportData, importData, clearAll, loadDemo } = useStack();
+  const { theme, toggleTheme, exportData, importData, clearAll, loadDemo, settings, setSettings } = useStack();
+  const field = (k: keyof Settings, label: string, opts: { type?: string; placeholder?: string; secret?: boolean } = {}) => (
+    <Field label={label}>
+      <input
+        className={inputCls}
+        type={opts.secret ? "password" : opts.type ?? "text"}
+        autoComplete="off"
+        placeholder={opts.placeholder}
+        value={String(settings[k] ?? "")}
+        onChange={(e) => setSettings({ [k]: opts.type === "number" ? Number(e.target.value) : e.target.value } as Partial<Settings>)}
+      />
+    </Field>
+  );
+  const askNotify = async () => {
+    if (typeof Notification === "undefined") return setMsg({ ok: false, text: "Ce navigateur ne gère pas les alertes. Sur iPhone, installe d'abord Stack sur l'écran d'accueil." });
+    const p = await Notification.requestPermission();
+    setSettings({ notify: p === "granted" });
+    setMsg(p === "granted" ? { ok: true, text: "Alertes activées sur cet appareil." } : { ok: false, text: "Alertes refusées par le navigateur." });
+  };
   const ref = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -34,8 +54,32 @@ export default function Reglages() {
         <Card title="Apparence">
           <Button onClick={toggleTheme}>{theme === "dark" ? <Sun size={16} /> : <Moon size={16} />} Passer en thème {theme === "dark" ? "clair" : "sombre"}</Button>
         </Card>
-        <Card title="Où sont mes données ?">
-          <p className="text-sm text-ink-2">Pour l&apos;instant, tes données sont enregistrées dans ce navigateur, sur cet appareil. Elles ne partent nulle part. Pour les garder en sécurité ou les passer sur un autre appareil, télécharge une sauvegarde et range-la sur ton Drive.</p>
+        <Card title="Toi">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {field("myName", "Ton nom (affiché aux clients)")}
+            {field("contactEmail", "Email de contact (portail client)", { type: "email" })}
+            {field("hourlyRate", "Taux horaire (€/h)", { type: "number" })}
+            {field("monitorMinutes", "Vérifier les sites toutes les (min)", { type: "number" })}
+          </div>
+          <Button className="mt-3" onClick={askNotify}><Bell size={16} /> {settings.notify ? "Alertes activées" : "Activer les alertes (site en panne, échéances)"}</Button>
+        </Card>
+        <SyncCard />
+        <Card title="Clés des services" className="lg:col-span-2">
+          <p className="mb-4 text-sm text-ink-2">Ces clés restent sur cet appareil. Elles ne sont ni synchronisées, ni dans les sauvegardes, ni sur GitHub. Mets-les sur chaque appareil où tu en as besoin.</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {field("anthropicKey", "Clé Claude (console.anthropic.com)", { secret: true, placeholder: "sk-ant-…" })}
+            {field("sentryToken", "Jeton Sentry (scope project:read)", { secret: true })}
+            {field("vercelToken", "Jeton Vercel", { secret: true })}
+            {field("vercelTeamId", "Équipe Vercel (facultatif)")}
+            {field("netlifyToken", "Jeton Netlify", { secret: true })}
+            {field("coolifyUrl", "Adresse de ton Coolify", { placeholder: "https://coolify.mondomaine.fr" })}
+            {field("coolifyToken", "Jeton Coolify", { secret: true })}
+            {field("githubToken", "Jeton GitHub (contenu du site)", { secret: true, placeholder: "github_pat_…" })}
+            {field("githubRepo", "Dépôt de ton site", { placeholder: "tatavo85110/mon-site" })}
+            {field("githubBranch", "Branche")}
+            {field("githubPath", "Fichier de contenu")}
+          </div>
+          <p className="mt-3 text-xs text-ink-2">Jeton GitHub : crée un « fine-grained token » limité au dépôt de ton site, avec seulement « Contents : Read and write ».</p>
         </Card>
         <Card title="Sauvegarde" className="lg:col-span-2">
           <div className="flex flex-wrap gap-2">

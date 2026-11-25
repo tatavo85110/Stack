@@ -2,10 +2,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useEffect, useState } from "react";
-import type { App, Client, Column, Project, Shortcut, TimeEntry, Timer, Todo } from "./types";
+import type { App, Check, Client, ClientRequest, Column, ContentItem, Project, ProjectTemplate, Settings, Shortcut, TechNote, TimeEntry, Timer, Todo } from "./types";
 import { seedApps, seedClients, seedProjects, seedShortcuts, seedTime, seedTodos } from "./seed";
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+export const uid = () => Math.random().toString(36).slice(2, 10);
 const today = () => new Date().toISOString().slice(0, 10);
 
 interface State {
@@ -19,6 +19,26 @@ interface State {
   theme: "light" | "dark";
   widgets: string[];
   note: string;
+  settings: Settings;
+  requests: ClientRequest[];
+  content: ContentItem[];
+  templates: ProjectTemplate[];
+  techNotes: TechNote[];
+  morning: { date: string; text: string } | null;
+  setSettings: (s: Partial<Settings>) => void;
+  recordCheck: (appId: string, c: Check) => void;
+  addRequest: (r: Omit<ClientRequest, "id">) => void;
+  updateRequest: (id: string, r: Partial<ClientRequest>) => void;
+  removeRequest: (id: string) => void;
+  saveContent: (c: Omit<ContentItem, "id"> & { id?: string }) => void;
+  removeContent: (id: string) => void;
+  saveTemplate: (t: Omit<ProjectTemplate, "id"> & { id?: string }) => void;
+  removeTemplate: (id: string) => void;
+  saveNote: (n: Omit<TechNote, "id" | "date"> & { id?: string }) => void;
+  removeNote: (id: string) => void;
+  setMorning: (text: string) => void;
+  addTodos: (labels: string[]) => void;
+  replaceAll: (data: Record<string, unknown>) => void;
   setWidgets: (w: string[]) => void;
   setNote: (n: string) => void;
   addShortcut: (s: Omit<Shortcut, "id">) => void;
@@ -70,8 +90,46 @@ const empty = () => ({
   time: [] as TimeEntry[],
   todos: [] as Todo[],
   timer: null as Timer | null,
+  requests: [] as ClientRequest[],
+  content: [] as ContentItem[],
+  techNotes: [] as TechNote[],
 });
-const DATA_KEYS = ["shortcuts", "apps", "clients", "projects", "time", "todos", "timer", "lastImport", "widgets", "note"] as const;
+export const DATA_KEYS = ["shortcuts", "apps", "clients", "projects", "time", "todos", "timer", "lastImport", "widgets", "note", "settings", "requests", "content", "templates", "techNotes"] as const;
+/** Keys and tokens: they stay on this device and are never put in backups or in the sync. */
+export const SECRET_SETTINGS = ["sentryToken", "vercelToken", "netlifyToken", "coolifyToken", "anthropicKey", "githubToken"] as const;
+
+export const DEFAULT_SETTINGS: Settings = {
+  myName: "", contactEmail: "", hourlyRate: 55, monitorMinutes: 5, notify: false,
+  sentryToken: "", vercelToken: "", vercelTeamId: "", netlifyToken: "", coolifyUrl: "", coolifyToken: "",
+  anthropicKey: "", githubToken: "", githubRepo: "", githubBranch: "main", githubPath: "content/stack.json",
+  supabaseUrl: "https://lljdjaribokedlowakud.supabase.co", supabaseKey: "sb_publishable_E7OOIK6lFTDlytbSQpOfyg_l62zdyR1",
+};
+const DEFAULT_TEMPLATES: ProjectTemplate[] = [
+  { id: "tpl-site", name: "Site vitrine", tag: "Site", days: 21, tasks: ["Brief et arborescence", "Maquettes", "Intégration", "Contenus du client", "SEO de base", "Mise en ligne", "Formation du client"] },
+  { id: "tpl-app", name: "Application web", tag: "Appli", days: 45, tasks: ["Cadrage et devis signé", "Modèle de données", "Maquettes", "Développement", "Tests", "Mise en production", "Suivi Sentry"] },
+  { id: "tpl-maint", name: "Intervention maintenance", tag: "Maintenance", days: 3, tasks: ["Sauvegarde avant intervention", "Mises à jour", "Vérification du site", "Compte rendu au client"] },
+];
+
+/** Recomputes status, uptime and series of an app from its live checks. */
+function withCheck(a: App, c: Check): App {
+  const checks = [c, ...(a.checks ?? [])].slice(0, 3000);
+  const day = 86_400_000, now = c.t;
+  const last30 = checks.filter((x) => now - x.t < 30 * day);
+  const uptime = last30.length ? (last30.filter((x) => x.ok).length / last30.length) * 100 : -1;
+  const uptimeSeries = Array.from({ length: 30 }, (_, i) => {
+    const from = now - (30 - i) * day, to = from + day;
+    const d = checks.filter((x) => x.t >= from && x.t < to);
+    return d.length ? (d.filter((x) => x.ok).length / d.length) * 100 : -1;
+  });
+  const responseSeries = Array.from({ length: 24 }, (_, i) => {
+    const from = now - (24 - i) * 3_600_000, to = from + 3_600_000;
+    const d = checks.filter((x) => x.ok && x.t >= from && x.t < to);
+    return d.length ? Math.round(d.reduce((s, x) => s + x.ms, 0) / d.length) : 0;
+  });
+  const recent = checks.slice(0, 2);
+  const status: App["status"] = !c.ok ? (recent.every((x) => !x.ok) ? "down" : "warn") : c.ms > 3000 ? "warn" : "ok";
+  return { ...a, checks, uptime, uptimeSeries, responseSeries, responseMs: c.ok ? c.ms : a.responseMs, status };
+}
 export const DEFAULT_WIDGETS = ["kpis", "raccourcis", "semaine", "echeances", "applis", "taches", "ca", "projet", "pipeline", "rdv"];
 
 export const useStack = create<State>()(
@@ -81,6 +139,23 @@ export const useStack = create<State>()(
       theme: "light",
       widgets: DEFAULT_WIDGETS,
       note: "",
+      settings: DEFAULT_SETTINGS,
+      templates: DEFAULT_TEMPLATES,
+      morning: null,
+      setSettings: (x) => set({ settings: { ...get().settings, ...x } }),
+      recordCheck: (appId, c) => set({ apps: get().apps.map((a) => (a.id === appId ? withCheck(a, c) : a)) }),
+      addRequest: (r) => set({ requests: [{ ...r, id: uid() }, ...get().requests] }),
+      updateRequest: (id, r) => set({ requests: get().requests.map((x) => (x.id === id ? { ...x, ...r } : x)) }),
+      removeRequest: (id) => set({ requests: get().requests.filter((x) => x.id !== id) }),
+      saveContent: (c) => set({ content: c.id && get().content.some((x) => x.id === c.id) ? get().content.map((x) => (x.id === c.id ? { ...x, ...c, id: x.id } : x)) : [{ ...c, id: uid() }, ...get().content] }),
+      removeContent: (id) => set({ content: get().content.filter((x) => x.id !== id) }),
+      saveTemplate: (t) => set({ templates: t.id && get().templates.some((x) => x.id === t.id) ? get().templates.map((x) => (x.id === t.id ? { ...x, ...t, id: x.id } : x)) : [...get().templates, { ...t, id: uid() }] }),
+      removeTemplate: (id) => set({ templates: get().templates.filter((x) => x.id !== id) }),
+      saveNote: (n) => set({ techNotes: n.id && get().techNotes.some((x) => x.id === n.id) ? get().techNotes.map((x) => (x.id === n.id ? { ...x, ...n, id: x.id, date: today() } : x)) : [{ ...n, id: uid(), date: today() }, ...get().techNotes] }),
+      removeNote: (id) => set({ techNotes: get().techNotes.filter((x) => x.id !== id) }),
+      setMorning: (text) => set({ morning: { date: today(), text } }),
+      addTodos: (labels) => set({ todos: [...get().todos, ...labels.map((label) => ({ id: uid(), label, done: false }))] }),
+      replaceAll: (d) => set(Object.fromEntries(DATA_KEYS.filter((k) => k in d).map((k) => [k, k === "settings" ? { ...get().settings, ...(d[k] as object), ...secretsOf(get().settings) } : d[k]])) as Partial<State>),
       setWidgets: (widgets) => set({ widgets }),
       setNote: (note) => set({ note }),
       addShortcut: (s) => set({ shortcuts: [...get().shortcuts, { ...s, id: uid() }] }),
@@ -161,20 +236,35 @@ export const useStack = create<State>()(
       toggleTheme: () => set({ theme: get().theme === "light" ? "dark" : "light" }),
       loadDemo: () => set({ ...demo() }),
       clearAll: () => set({ ...empty(), lastImport: null }),
-      exportData: () => {
-        const st = get() as unknown as Record<string, unknown>;
-        return JSON.stringify({ app: "stack", version: 2, exportedAt: new Date().toISOString(), data: Object.fromEntries(DATA_KEYS.map((k) => [k, st[k]])) }, null, 2);
-      },
+      exportData: () => JSON.stringify({ app: "stack", version: 3, exportedAt: new Date().toISOString(), data: publicData(get()) }, null, 2),
       importData: (json) => {
         const parsed = JSON.parse(json);
         if (parsed?.app !== "stack" || typeof parsed.data !== "object") throw new Error("Ce fichier n'est pas une sauvegarde Stack.");
-        const d = parsed.data as Record<string, unknown>;
-        set(Object.fromEntries(DATA_KEYS.filter((k) => k in d).map((k) => [k, d[k]])) as Partial<State>);
+        get().replaceAll(parsed.data as Record<string, unknown>);
       },
     }),
-    { name: "stack-data-v2" },
+    {
+      name: "stack-data-v2",
+      version: 3,
+      migrate: (p) => p as State,
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<State>;
+        return { ...current, ...p, settings: { ...DEFAULT_SETTINGS, ...Object.fromEntries(Object.entries(p.settings ?? {}).filter(([, v]) => v !== "")) } as Settings, templates: p.templates ?? current.templates };
+      },
+    },
   ),
 );
+
+function secretsOf(s: Settings) {
+  return Object.fromEntries(SECRET_SETTINGS.map((k) => [k, s[k]]));
+}
+/** Everything that can leave the device (backup file, sync): no keys or tokens. */
+export function publicData(st: State) {
+  const r = st as unknown as Record<string, unknown>;
+  const d: Record<string, unknown> = Object.fromEntries(DATA_KEYS.map((k) => [k, r[k]]));
+  d.settings = Object.fromEntries(Object.entries(st.settings).filter(([k]) => !(SECRET_SETTINGS as readonly string[]).includes(k)));
+  return d;
+}
 
 /** Avoids hydration mismatches: renders persisted data only once mounted in the browser. */
 export function useHydrated() {

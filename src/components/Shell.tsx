@@ -5,7 +5,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import clsx from "clsx";
 import { Search, Moon, Sun, ExternalLink, Settings } from "lucide-react";
 import { LogoIcon } from "./Logo";
-import { mainNav, topTabs, isActive } from "./nav";
+import { mainNav, mobileNav, topTabs, isActive, PUBLIC_PAGES } from "./nav";
+import { useMonitor } from "@/lib/monitor";
+import { useCloudSync } from "@/lib/sync";
 import { CommandPalette } from "./CommandPalette";
 import { useStack, useHydrated } from "@/lib/store";
 import { INDY_URL } from "@/lib/format";
@@ -13,14 +15,30 @@ import { TimerBar } from "./TimerBar";
 
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
+  if (PUBLIC_PAGES.some((p) => path.startsWith(p))) return <PublicShell>{children}</PublicShell>;
+  return <Cockpit path={path}>{children}</Cockpit>;
+}
+
+function PublicShell({ children }: { children: ReactNode }) {
+  const hydrated = useHydrated();
+  return <main className="mx-auto min-h-dvh w-full max-w-4xl px-4 py-8 md:py-12">{hydrated ? children : null}</main>;
+}
+
+function Cockpit({ children, path }: { children: ReactNode; path: string }) {
   const [cmd, setCmd] = useState(false);
   const theme = useStack((s) => s.theme);
   const toggleTheme = useStack((s) => s.toggleTheme);
   const hydrated = useHydrated();
+  useMonitor();
+  useCloudSync();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator && location.hostname !== "localhost") navigator.serviceWorker.register(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/sw.js`).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -34,14 +52,14 @@ export function Shell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-dvh print:block">
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-dvh w-[76px] shrink-0 flex-col items-center gap-2 bg-night py-5 md:flex">
+      <aside className="no-print sticky top-0 hidden h-dvh w-[76px] shrink-0 flex-col items-center gap-2 bg-night py-5 md:flex">
         <Link href="/" className="mb-4 transition-transform hover:scale-105" aria-label="Accueil Stack">
           <LogoIcon size={42} />
         </Link>
         {mainNav.map(({ href, label, icon: Icon }) => {
-          const on = isActive(href, path) || (href === "/clients" && path.startsWith("/clients"));
+          const on = href === "/clients" ? path.startsWith("/clients") : isActive(href, path);
           return (
             <Link
               key={href}
@@ -72,7 +90,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 border-b border-line/70 bg-page/85 backdrop-blur">
+        <header className="no-print sticky top-0 z-30 border-b border-line/70 bg-page/85 backdrop-blur">
           <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-3 md:px-8">
             <Link href="/" className="md:hidden">
               <LogoIcon size={34} />
@@ -112,16 +130,16 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <TimerBar />
+        <div className="no-print"><TimerBar /></div>
         <main key={path} className="page-enter mx-auto w-full max-w-[1400px] flex-1 px-4 pt-6 pb-28 md:px-8 md:pb-12">
           {hydrated ? children : <div className="h-96 animate-pulse rounded-2xl bg-muted" />}
         </main>
       </div>
 
       {/* Bottom bar (mobile) */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+      <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-md justify-around px-2 py-2">
-          {mainNav.map(({ href, label, icon: Icon }) => {
+          {mobileNav.map(({ href, label, icon: Icon }) => {
             const on = href === "/clients" ? path.startsWith("/clients") : isActive(href, path);
             return (
               <Link key={href} href={href} className={clsx("flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors", on ? "text-bright" : "text-ink-2")}>

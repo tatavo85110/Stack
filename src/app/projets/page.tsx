@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 import clsx from "clsx";
-import { Plus, Play, CalendarDays } from "lucide-react";
-import { useStack } from "@/lib/store";
-import type { Column, Project } from "@/lib/types";
+import { Plus, Play, CalendarDays, X } from "lucide-react";
+import { useStack, uid } from "@/lib/store";
+import type { Column, Deliverable, Project, Todo } from "@/lib/types";
 import { Button, Field, Kpi, Modal, PageHeader, Pill, Progress, inputCls } from "@/components/ui";
 import { ProjectsTabs } from "@/components/ProjectsTabs";
 import { daysUntil, hours, isoIn, shortDate } from "@/lib/format";
@@ -17,16 +17,34 @@ const COLS: { id: Column; label: string }[] = [
 ];
 
 function ProjectForm({ column, initial, onDone }: { column: Column; initial?: Project; onDone: () => void }) {
-  const { clients, addProject, updateProject, removeProject } = useStack();
+  const { clients, templates, addProject, updateProject, removeProject } = useStack();
   const [f, setF] = useState({ title: initial?.title ?? "", clientId: initial?.clientId ?? "", due: initial?.due ?? isoIn(14), tag: initial?.tag ?? "Front", progress: initial?.progress ?? 0 });
+  const [tasks, setTasks] = useState<Todo[]>(initial?.tasks ?? []);
+  const [deliv, setDeliv] = useState<Deliverable[]>(initial?.deliverables ?? []);
+  const [newTask, setNewTask] = useState("");
+  const [d, setD] = useState({ label: "", url: "https://" });
+  const applyTemplate = (id: string) => {
+    const t = templates.find((x) => x.id === id);
+    if (!t) return;
+    setF({ ...f, tag: t.tag, due: isoIn(t.days), title: f.title || t.name });
+    setTasks(t.tasks.map((label) => ({ id: uid(), label, done: false })));
+  };
+  const auto = tasks.length ? Math.round((tasks.filter((t) => t.done).length / tasks.length) * 100) : null;
   return (
     <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault();
       if (!f.title.trim()) return;
-      const data = { ...f, title: f.title.trim(), clientId: f.clientId || undefined };
+      const data = { ...f, progress: auto ?? f.progress, title: f.title.trim(), clientId: f.clientId || undefined, tasks, deliverables: deliv };
       if (initial) updateProject(initial.id, data); else addProject({ ...data, column });
       onDone();
     }}>
+      {!initial && templates.length > 0 && (
+        <Field label="Partir d'un modèle">
+          <select className={inputCls} defaultValue="" onChange={(e) => applyTemplate(e.target.value)}>
+            <option value="">Projet vide</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.tasks.length} étapes)</option>)}
+          </select>
+        </Field>
+      )}
       <Field label="Titre"><input className={inputCls} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} autoFocus required /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Client">
@@ -37,7 +55,40 @@ function ProjectForm({ column, initial, onDone }: { column: Column; initial?: Pr
         <Field label="Échéance"><input type="date" className={inputCls} value={f.due} onChange={(e) => setF({ ...f, due: e.target.value })} /></Field>
       </div>
       <Field label="Étiquette"><input className={inputCls} value={f.tag} onChange={(e) => setF({ ...f, tag: e.target.value })} /></Field>
-      <Field label={`Avancement : ${f.progress} %`}><input type="range" min="0" max="100" step="5" value={f.progress} onChange={(e) => setF({ ...f, progress: Number(e.target.value) })} className="w-full accent-[var(--bright)]" /></Field>
+      <div>
+        <p className="mb-1.5 text-xs font-semibold text-ink-2">Étapes {auto !== null && `(avancement calculé : ${auto} %)`}</p>
+        <ul className="space-y-1">
+          {tasks.map((t) => (
+            <li key={t.id} className="flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 text-sm">
+              <input type="checkbox" checked={t.done} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} className="size-4 accent-[var(--bright)]" aria-label={t.label} />
+              <span className={clsx("flex-1", t.done && "text-ink-2 line-through")}>{t.label}</span>
+              <button type="button" onClick={() => setTasks(tasks.filter((x) => x.id !== t.id))} className="text-ink-2 hover:text-down" aria-label="Retirer l'étape"><X size={14} /></button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-1.5 flex gap-2">
+          <input className={inputCls} placeholder="Ajouter une étape" value={newTask} onChange={(e) => setNewTask(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (newTask.trim()) { setTasks([...tasks, { id: uid(), label: newTask.trim(), done: false }]); setNewTask(""); } } }} />
+          <Button type="button" onClick={() => { if (newTask.trim()) { setTasks([...tasks, { id: uid(), label: newTask.trim(), done: false }]); setNewTask(""); } }}><Plus size={15} /></Button>
+        </div>
+      </div>
+      {auto === null && <Field label={`Avancement : ${f.progress} %`}><input type="range" min="0" max="100" step="5" value={f.progress} onChange={(e) => setF({ ...f, progress: Number(e.target.value) })} className="w-full accent-[var(--bright)]" /></Field>}
+      <div>
+        <p className="mb-1.5 text-xs font-semibold text-ink-2">Livrables (visibles dans le portail du client)</p>
+        <ul className="space-y-1">
+          {deliv.map((x) => (
+            <li key={x.id} className="flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 text-sm">
+              <a href={x.url} target="_blank" rel="noreferrer" className="flex-1 truncate font-semibold text-bright">{x.label}</a>
+              <span className="text-xs text-ink-2">{shortDate(x.date)}</span>
+              <button type="button" onClick={() => setDeliv(deliv.filter((y) => y.id !== x.id))} className="text-ink-2 hover:text-down" aria-label="Retirer le livrable"><X size={14} /></button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-1.5 grid grid-cols-[1fr_1fr_auto] gap-2">
+          <input className={inputCls} placeholder="Nom (ex. maquettes)" value={d.label} onChange={(e) => setD({ ...d, label: e.target.value })} />
+          <input className={inputCls} placeholder="Lien" value={d.url} onChange={(e) => setD({ ...d, url: e.target.value })} />
+          <Button type="button" onClick={() => { if (d.label.trim() && d.url.length > 8) { setDeliv([...deliv, { id: uid(), label: d.label.trim(), url: d.url.trim(), date: new Date().toISOString().slice(0, 10) }]); setD({ label: "", url: "https://" }); } }}><Plus size={15} /></Button>
+        </div>
+      </div>
       <div className="flex gap-2">
         {initial && <Button type="button" variant="ghost" className="text-down" onClick={() => { if (confirm(`Supprimer « ${initial.title} » et son temps ?`)) { removeProject(initial.id); onDone(); } }}>Supprimer</Button>}
         <Button type="button" className="ml-auto" onClick={onDone}>Annuler</Button>

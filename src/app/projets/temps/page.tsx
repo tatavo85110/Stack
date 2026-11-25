@@ -9,7 +9,6 @@ import { useElapsed } from "@/components/TimerBar";
 import { eur, hours, isoIn, shortDate } from "@/lib/format";
 import { weekMinutes } from "@/lib/stats";
 
-const RATE = 55; // € / h used to value billable time; adjust later in settings
 
 function ManualEntry({ onDone }: { onDone: () => void }) {
   const { projects, addTimeEntry } = useStack();
@@ -30,6 +29,7 @@ function ManualEntry({ onDone }: { onDone: () => void }) {
 }
 
 export default function Temps() {
+  const RATE = useStack((st) => st.settings.hourlyRate) || 55;
   const { time, projects, clients, timer, startTimer, stopTimer } = useStack();
   const [adding, setAdding] = useState(false);
   const [pick, setPick] = useState(projects.find((p) => p.column === "doing")?.id ?? projects[0]?.id ?? "");

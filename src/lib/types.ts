@@ -32,7 +32,20 @@ export interface App {
   responseSeries: number[]; // 24 points
   uptimeSeries: number[]; // 30 points
   notes: string;
+  /** Live checks done from the browser (most recent first, capped). */
+  checks?: Check[];
+  sentryOrg?: string;
+  sentryProject?: string;
+  sentryIssues?: SentryIssue[];
+  sentryCheckedAt?: string;
+  deployProvider?: "" | "vercel" | "netlify" | "coolify";
+  deployProjectId?: string;
+  lastBackup?: string;
+  backupEveryDays?: number;
 }
+
+export interface Check { t: number; ok: boolean; ms: number }
+export interface SentryIssue { id: string; title: string; culprit: string; count: number; lastSeen: string; level: string; permalink: string }
 
 export interface Invoice { date: string; amount: number }
 export interface HistoryItem { date: string; label: string }
@@ -64,6 +77,40 @@ export interface Project {
   due: string;
   progress: number;
   tag: string;
+  tasks?: Todo[];
+  deliverables?: Deliverable[];
+}
+
+export interface Deliverable { id: string; label: string; url: string; date: string }
+
+export interface ClientRequest { id: string; clientId?: string; from: string; date: string; text: string; status: "Nouvelle" | "En cours" | "Faite" }
+
+export type ContentKind = "projet" | "temoignage" | "article";
+export interface ContentItem { id: string; kind: ContentKind; title: string; body: string; url: string; image: string; author: string; date: string; tags: string[]; published: boolean }
+
+export interface ProjectTemplate { id: string; name: string; tag: string; days: number; tasks: string[] }
+
+export interface TechNote { id: string; title: string; body: string; tags: string[]; appId?: string; date: string }
+
+export interface Settings {
+  myName: string;
+  contactEmail: string;
+  hourlyRate: number;
+  monitorMinutes: number;
+  notify: boolean;
+  sentryToken: string;
+  vercelToken: string;
+  vercelTeamId: string;
+  netlifyToken: string;
+  coolifyUrl: string;
+  coolifyToken: string;
+  anthropicKey: string;
+  githubToken: string;
+  githubRepo: string;
+  githubBranch: string;
+  githubPath: string;
+  supabaseUrl: string;
+  supabaseKey: string;
 }
 
 export interface TimeEntry { id: string; projectId: string; label: string; date: string; minutes: number; billable: boolean }
