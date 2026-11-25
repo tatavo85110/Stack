@@ -30,7 +30,7 @@ export function revenueThisMonth(clients: Client[]) {
   return revenueByMonth(clients, 1)[0].value;
 }
 
-export const clientTotal = (c: Client) => c.invoices.reduce((a, i) => a + i.amount, 0);
+export const clientTotal = (c: Client) => Math.max(c.invoices.reduce((a, i) => a + i.amount, 0), c.indyTotal ?? 0);
 
 export function averageBasket(clients: Client[]) {
   const inv = clients.flatMap((c) => c.invoices).filter((i) => i.amount >= 500);

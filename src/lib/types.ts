@@ -66,6 +66,8 @@ export interface Client {
   quoteAmount?: number;
   nextAction?: { label: string; date: string };
   history: HistoryItem[];
+  /** "Total facturé TTC" shown on Indy's client list, when the client comes from Indy. */
+  indyTotal?: number;
 }
 
 export interface Project {

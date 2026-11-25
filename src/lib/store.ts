@@ -63,6 +63,7 @@ interface State {
   indyMonthly: Record<string, number>;
   indySyncedAt: string | null;
   setIndyMonthly: (byYear: Record<string, number[]>) => number;
+  syncIndyClients: (rows: { name: string; kind: string; date: string; total: number }[]) => { added: number; updated: number };
   updateApp: (id: string, a: Partial<App>) => void;
   removeApp: (id: string) => void;
   updateClient: (id: string, c: Partial<Client>) => void;
@@ -216,6 +217,22 @@ export const useStack = create<State>()(
         for (const [y, values] of Object.entries(byYear)) values.slice(0, 12).forEach((v, i) => { next[`${y}-${String(i + 1).padStart(2, "0")}`] = v; n++; });
         set({ indyMonthly: next, indySyncedAt: new Date().toISOString() });
         return n;
+      },
+      syncIndyClients: (rows) => {
+        const norm = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+        const clients = [...get().clients];
+        let added = 0, updated = 0;
+        for (const r of rows) {
+          const i = clients.findIndex((c) => norm(c.name) === norm(r.name));
+          if (i >= 0) {
+            if (clients[i].indyTotal !== r.total) { clients[i] = { ...clients[i], indyTotal: r.total }; updated++; }
+            continue;
+          }
+          clients.push({ id: uid(), name: r.name, contact: "", email: "", phone: "", sector: r.kind, stage: "Actif", source: "Réseau", since: r.date, firstContact: r.date, signedAt: r.date, invoices: [], indyTotal: r.total, history: [{ date: today(), label: "Client ajouté depuis Indy" }] });
+          added++;
+        }
+        set({ clients, indySyncedAt: new Date().toISOString() });
+        return { added, updated };
       },
       importInvoices: (rows) => {
         const clients = get().clients.map((c) => ({ ...c, invoices: [...c.invoices] }));
