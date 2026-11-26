@@ -1,5 +1,6 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { Fragment, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Plus, ExternalLink } from "lucide-react";
@@ -7,6 +8,8 @@ import { useStack } from "@/lib/store";
 import { Button, ButtonLink, Card, Empty, Kpi, Modal, PageHeader, Segmented, Status, Pill } from "@/components/ui";
 import { AppForm } from "@/components/AppForm";
 import { AppIcon } from "@/components/blocks";
+import { CategoryManager } from "@/components/Categories";
+import { categoryList, NO_CATEGORY } from "@/lib/store";
 import { daysUntil, num } from "@/lib/format";
 import { deadlines } from "@/lib/stats";
 
@@ -22,7 +25,11 @@ function Applis() {
   const [adding, setAdding] = useState(false);
   const params = useSearchParams();
   useEffect(() => { if (params.get("ajout")) setAdding(true); }, [params]);
-  const list = apps.filter((a) => (filter === "all" ? true : filter === "clients" ? a.clientId : !a.clientId));
+  const cats = useStack(useShallow((st) => categoryList("apps", st)));
+  const [cat, setCat] = useState<string | null>(null);
+  const list = apps.filter((a) => (filter === "all" ? true : filter === "clients" ? a.clientId : !a.clientId)).filter((a) => cat === null || (a.category || "") === cat);
+  const sections = [...cats, ""].map((c) => ({ c, items: list.filter((a) => (a.category || "") === c) })).filter((x) => x.items.length);
+  const grouped = cats.length > 0;
   const measured = apps.filter((a) => a.uptime >= 0);
   const avgUptime = measured.length ? measured.reduce((a, x) => a + x.uptime, 0) / measured.length : null;
   const soon = deadlines(apps, 30).length;
@@ -44,6 +51,7 @@ function Applis() {
                 { value: "perso", label: `Perso · ${apps.filter((a) => !a.clientId).length}` },
               ]}
             />
+            <CategoryManager kind="apps" />
             <Button variant="primary" onClick={() => setAdding(true)}><Plus size={16} /> Ajouter une appli</Button>
           </>
         }
@@ -54,6 +62,15 @@ function Applis() {
         <Kpi tone="ice" label="Échéances sous 30 j" value={soon} />
         <Kpi tone="plain" label="Erreurs sur 7 j" value={apps.reduce((a, x) => a + x.errors7d, 0)} />
       </div>
+      {cats.length > 0 && (
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          {[null, ...cats, ...(apps.some((a) => !a.category) ? [""] : [])].map((c) => (
+            <button key={c ?? "__all"} onClick={() => setCat(c)} className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${cat === c ? "bg-night text-white dark:bg-bright" : "bg-surface text-ink-2 shadow-card hover:text-ink"}`}>
+              {c === null ? "Toutes" : c || NO_CATEGORY} <span className="opacity-60">{c === null ? apps.length : apps.filter((a) => (a.category || "") === c).length}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <Card className="overflow-hidden p-0">
           <div className="overflow-x-auto">
@@ -64,7 +81,10 @@ function Applis() {
                 </tr>
               </thead>
               <tbody>
-                {list.map((a) => {
+                {sections.map(({ c, items }) => (
+                  <Fragment key={c || "__none"}>
+                  {grouped && <tr className="bg-muted/60"><td colSpan={6} className="px-5 py-2 text-xs font-bold tracking-wide text-ink-2 uppercase">{c || NO_CATEGORY}</td></tr>}
+                  {items.map((a) => {
                   const next = [a.domainExpiry, a.sslExpiry, a.hostingRenewal].filter(Boolean).sort()[0];
                   const n = next ? daysUntil(next) : null;
                   return (
@@ -83,6 +103,8 @@ function Applis() {
                     </tr>
                   );
                 })}
+                  </Fragment>
+                ))}
                 {!list.length && <tr><td colSpan={6} className="p-5"><Empty>Aucune appli pour l&apos;instant. <button className="font-semibold text-bright" onClick={() => setAdding(true)}>Ajouter une appli</button></Empty></td></tr>}
               </tbody>
             </table>

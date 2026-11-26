@@ -42,6 +42,12 @@ interface State {
   setWidgets: (w: string[]) => void;
   setNote: (n: string) => void;
   addShortcut: (s: Omit<Shortcut, "id">) => void;
+  /** Ordered category lists, kept even when a category is empty. */
+  categories: Record<CategoryKind, string[]>;
+  addCategory: (kind: CategoryKind, name: string) => void;
+  renameCategory: (kind: CategoryKind, from: string, to: string) => void;
+  removeCategory: (kind: CategoryKind, name: string) => void;
+  moveCategory: (kind: CategoryKind, name: string, dir: -1 | 1) => void;
   updateShortcut: (id: string, s: Partial<Shortcut>) => void;
   removeShortcut: (id: string) => void;
   toggleTodo: (id: string) => void;
@@ -56,7 +62,7 @@ interface State {
   setClientStage: (id: string, stage: Client["stage"]) => void;
   completeNextAction: (id: string) => void;
   addHistory: (id: string, label: string) => void;
-  addApp: (a: Pick<App, "name" | "url" | "stack" | "host" | "clientId"> & Partial<Pick<App, "domainExpiry" | "sslExpiry" | "hostingRenewal" | "notes" | "status">>) => void;
+  addApp: (a: Pick<App, "name" | "url" | "stack" | "host" | "clientId"> & Partial<Pick<App, "category" | "icon" | "domainExpiry" | "sslExpiry" | "hostingRenewal" | "notes" | "status">>) => void;
   importInvoices: (rows: { date: string; client: string; amount: number }[]) => { added: number; skipped: number; newClients: number };
   lastImport: string | null;
   /** Monthly revenue read from the Indy "Pilotage" dashboard, keyed "YYYY-MM". Wins over imported invoices. */
@@ -87,7 +93,19 @@ const demo = () => ({
   todos: seedTodos,
   timer: null as Timer | null,
 });
+export type CategoryKind = "shortcuts" | "apps";
+export const NO_CATEGORY = "Sans catégorie";
+const catOf = (kind: CategoryKind, x: { group?: string; category?: string }) => (kind === "shortcuts" ? x.group : x.category) || "";
+
+/** Categories in Mathéo's order, plus any used by an item but missing from the list. */
+export function categoryList(kind: CategoryKind, st: { categories?: Record<CategoryKind, string[]>; shortcuts: Shortcut[]; apps: App[] }) {
+  const saved = st.categories?.[kind] ?? [];
+  const used = (kind === "shortcuts" ? st.shortcuts : st.apps).map((x) => catOf(kind, x)).filter(Boolean);
+  return [...new Set([...saved, ...used])];
+}
+
 const empty = () => ({
+  categories: { shortcuts: [], apps: [] } as Record<CategoryKind, string[]>,
   shortcuts: [] as Shortcut[],
   apps: [] as App[],
   clients: [] as Client[],
@@ -99,7 +117,7 @@ const empty = () => ({
   content: [] as ContentItem[],
   techNotes: [] as TechNote[],
 });
-export const DATA_KEYS = ["shortcuts", "apps", "clients", "projects", "time", "todos", "timer", "lastImport", "indyMonthly", "indySyncedAt", "widgets", "note", "settings", "requests", "content", "templates", "techNotes"] as const;
+export const DATA_KEYS = ["shortcuts", "apps", "clients", "projects", "time", "todos", "timer", "lastImport", "categories", "indyMonthly", "indySyncedAt", "widgets", "note", "settings", "requests", "content", "templates", "techNotes"] as const;
 /** Keys and tokens: they stay on this device and are never put in backups or in the sync. */
 export const SECRET_SETTINGS = ["sentryToken", "vercelToken", "netlifyToken", "coolifyToken", "anthropicKey", "githubToken"] as const;
 
@@ -164,6 +182,40 @@ export const useStack = create<State>()(
       setWidgets: (widgets) => set({ widgets }),
       setNote: (note) => set({ note }),
       addShortcut: (s) => set({ shortcuts: [...get().shortcuts, { ...s, id: uid() }] }),
+      addCategory: (kind, name) => {
+        const n = name.trim();
+        const list = categoryList(kind, get());
+        if (!n || list.some((c) => c.toLowerCase() === n.toLowerCase())) return;
+        set({ categories: { ...get().categories, [kind]: [...list, n] } });
+      },
+      renameCategory: (kind, from, to) => {
+        const n = to.trim();
+        if (!n || n === from) return;
+        const list = categoryList(kind, get()).map((c) => (c === from ? n : c));
+        const st = get();
+        set({
+          categories: { ...st.categories, [kind]: [...new Set(list)] },
+          ...(kind === "shortcuts"
+            ? { shortcuts: st.shortcuts.map((x) => (x.group === from ? { ...x, group: n } : x)) }
+            : { apps: st.apps.map((x) => (x.category === from ? { ...x, category: n } : x)) }),
+        });
+      },
+      removeCategory: (kind, name) => {
+        const st = get();
+        set({
+          categories: { ...st.categories, [kind]: categoryList(kind, st).filter((c) => c !== name) },
+          ...(kind === "shortcuts"
+            ? { shortcuts: st.shortcuts.map((x) => (x.group === name ? { ...x, group: "" } : x)) }
+            : { apps: st.apps.map((x) => (x.category === name ? { ...x, category: undefined } : x)) }),
+        });
+      },
+      moveCategory: (kind, name, dir) => {
+        const list = categoryList(kind, get());
+        const i = list.indexOf(name), j = i + dir;
+        if (i < 0 || j < 0 || j >= list.length) return;
+        [list[i], list[j]] = [list[j], list[i]];
+        set({ categories: { ...get().categories, [kind]: list } });
+      },
       updateShortcut: (id, s) => set({ shortcuts: get().shortcuts.map((x) => (x.id === id ? { ...x, ...s } : x)) }),
       removeShortcut: (id) => set({ shortcuts: get().shortcuts.filter((x) => x.id !== id) }),
       toggleTodo: (id) => set({ todos: get().todos.map((t) => (t.id === id ? { ...t, done: !t.done } : t)) }),

@@ -19,6 +19,8 @@ export interface App {
   name: string;
   /** Favicon: an imported image (data URL) or the site's own favicon. */
   icon?: string;
+  /** Category chosen by Mathéo (e.g. "Clients", "Perso", "SaaS"). Empty = no category. */
+  category?: string;
   clientId?: string;
   url: string;
   stack: string;

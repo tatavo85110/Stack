@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { Globe, Upload, X } from "lucide-react";
 import { fileToIcon, siteFavicon } from "@/lib/icons";
 import { AppIcon } from "./blocks";
+import { CategoryPicker } from "./Categories";
 import { useStack } from "@/lib/store";
 import type { App } from "@/lib/types";
 import { Button, Field, inputCls } from "./ui";
@@ -13,7 +14,7 @@ export function AppForm({ initial, onDone, onDeleted }: { initial?: App; onDone:
     name: initial?.name ?? "", url: initial?.url ?? "https://", stack: initial?.stack ?? "Next.js", host: initial?.host ?? "Vercel", clientId: initial?.clientId ?? "",
     status: initial?.status ?? "ok", domainExpiry: initial?.domainExpiry ?? "", sslExpiry: initial?.sslExpiry ?? "", hostingRenewal: initial?.hostingRenewal ?? "", notes: initial?.notes ?? "",
     sentryOrg: initial?.sentryOrg ?? "", sentryProject: initial?.sentryProject ?? "", deployProvider: initial?.deployProvider ?? "", deployProjectId: initial?.deployProjectId ?? "",
-    lastBackup: initial?.lastBackup ?? "", backupEveryDays: String(initial?.backupEveryDays ?? ""), icon: initial?.icon ?? "",
+    lastBackup: initial?.lastBackup ?? "", backupEveryDays: String(initial?.backupEveryDays ?? ""), icon: initial?.icon ?? "", category: initial?.category ?? "",
   });
   const fileRef = useRef<HTMLInputElement>(null);
   const [iconError, setIconError] = useState("");
@@ -28,12 +29,13 @@ export function AppForm({ initial, onDone, onDeleted }: { initial?: App; onDone:
     <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault();
       if (!f.name.trim()) return;
-      const data = { ...f, icon: f.icon || undefined, name: f.name.trim(), clientId: f.clientId || undefined, status: f.status as App["status"], deployProvider: f.deployProvider as App["deployProvider"], backupEveryDays: Number(f.backupEveryDays) || undefined };
+      const data = { ...f, icon: f.icon || undefined, category: f.category || undefined, name: f.name.trim(), clientId: f.clientId || undefined, status: f.status as App["status"], deployProvider: f.deployProvider as App["deployProvider"], backupEveryDays: Number(f.backupEveryDays) || undefined };
       if (initial) updateApp(initial.id, data); else addApp(data);
       onDone();
     }}>
       <Field label="Nom"><input className={inputCls} value={f.name} onChange={set("name")} required autoFocus /></Field>
       <Field label="Adresse"><input className={inputCls} value={f.url} onChange={set("url")} onBlur={() => !f.icon && siteFavicon(f.url) && setF((x) => ({ ...x, icon: siteFavicon(x.url) ?? "" }))} /></Field>
+      <CategoryPicker kind="apps" value={f.category} onChange={(category) => setF((x) => ({ ...x, category }))} />
       <div>
         <span className="mb-1.5 block text-xs font-semibold text-ink-2">Favicon</span>
         <div

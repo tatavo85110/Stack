@@ -1,24 +1,26 @@
 "use client";
+import { useShallow } from "zustand/react/shallow";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import { Plus, Upload, Trash2, Pencil, Globe } from "lucide-react";
-import { useStack } from "@/lib/store";
+import { categoryList, NO_CATEGORY, useStack } from "@/lib/store";
 import type { Shortcut } from "@/lib/types";
 import { Button, Field, Modal, PageHeader, inputCls } from "@/components/ui";
 import { ShortcutIcon } from "@/components/blocks";
 import { initialsOf } from "@/lib/format";
 import { fileToIcon } from "@/lib/icons";
+import { CategoryManager, CategoryPicker } from "@/components/Categories";
 
 const COLORS = ["#0b1f3a", "#15325a", "#1d5fd8", "#2f7fd0", "#5aa7e6", "#1b6aa5"];
 
 /** Reads an image file and returns a small square PNG data URL (keeps localStorage light). */
 
-function ShortcutForm({ initial, groups, onDone }: { initial?: Shortcut; groups: string[]; onDone: () => void }) {
+function ShortcutForm({ initial, onDone }: { initial?: Shortcut; onDone: () => void }) {
   const { addShortcut, updateShortcut, removeShortcut } = useStack();
   const [url, setUrl] = useState(initial?.url ?? "https://");
   const [name, setName] = useState(initial?.name ?? "");
-  const [group, setGroup] = useState(initial?.group ?? groups[0] ?? "Général");
+  const [group, setGroup] = useState(initial?.group ?? "");
   const [icon, setIcon] = useState<string | undefined>(initial?.icon);
   const [color, setColor] = useState(initial?.color ?? COLORS[2]);
   const [mode, setMode] = useState<"file" | "initials">(initial?.icon ? "file" : initial ? "initials" : "file");
@@ -41,7 +43,7 @@ function ShortcutForm({ initial, groups, onDone }: { initial?: Shortcut; groups:
   const save = () => {
     if (!name.trim()) return setError("Donne un nom au raccourci.");
     if (!/^https?:\/\/.+\..+/.test(url)) return setError("L'adresse doit commencer par https:// et contenir un domaine.");
-    const data = { name: name.trim(), url: url.trim(), group: group.trim() || "Général", icon: mode === "file" ? icon : undefined, initials: initialsOf(name), color };
+    const data = { name: name.trim(), url: url.trim(), group: group.trim(), icon: mode === "file" ? icon : undefined, initials: initialsOf(name), color };
     if (initial) updateShortcut(initial.id, data);
     else addShortcut(data);
     onDone();
@@ -62,10 +64,7 @@ function ShortcutForm({ initial, groups, onDone }: { initial?: Shortcut; groups:
       <Field label="Nom">
         <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Banque" />
       </Field>
-      <Field label="Groupe">
-        <input className={inputCls} list="groups" value={group} onChange={(e) => setGroup(e.target.value)} />
-        <datalist id="groups">{groups.map((g) => <option key={g} value={g} />)}</datalist>
-      </Field>
+      <CategoryPicker kind="shortcuts" value={group} onChange={setGroup} />
       <div>
         <span className="mb-1.5 block text-xs font-semibold text-ink-2">Icône</span>
         <div className="grid grid-cols-2 gap-2">
@@ -113,21 +112,22 @@ function Shortcuts() {
   useEffect(() => {
     if (params.get("ajout")) setEditing("new");
   }, [params]);
-  const groups = [...new Set(shortcuts.map((s) => s.group))];
+  const cats = useStack(useShallow((st) => categoryList("shortcuts", st)));
+  const groups = [...cats, ""].filter((g) => shortcuts.some((s) => (s.group || "") === g));
 
   return (
     <>
       <PageHeader
         crumbs={[{ label: "Stack", href: "/" }, { label: "Raccourcis" }]}
         title="Raccourcis"
-        actions={<Button variant="primary" onClick={() => setEditing("new")}><Plus size={16} /> Ajouter un raccourci</Button>}
+        actions={<><CategoryManager kind="shortcuts" /><Button variant="primary" onClick={() => setEditing("new")}><Plus size={16} /> Ajouter un raccourci</Button></>}
       />
       <div className="space-y-6">
         {groups.map((g) => (
           <section key={g}>
-            <h2 className="mb-3 text-sm font-bold text-ink-2">{g}</h2>
+            <h2 className="mb-3 text-sm font-bold text-ink-2">{g || NO_CATEGORY}</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {shortcuts.filter((s) => s.group === g).map((s) => (
+              {shortcuts.filter((s) => (s.group || "") === g).map((s) => (
                 <div key={s.id} className="group relative">
                   <a href={s.url} target="_blank" rel="noreferrer" className="flex h-full flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-card transition-[box-shadow,transform,border-color] duration-150 hover:-translate-y-0.5 hover:border-bright hover:shadow-lg">
                     <ShortcutIcon s={s} size={44} />
@@ -149,7 +149,7 @@ function Shortcuts() {
         </button>
       </div>
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Nouveau raccourci" : "Modifier le raccourci"}>
-        {editing !== null && <ShortcutForm key={editing === "new" ? "new" : editing.id} initial={editing === "new" ? undefined : editing} groups={groups} onDone={() => setEditing(null)} />}
+        {editing !== null && <ShortcutForm key={editing === "new" ? "new" : editing.id} initial={editing === "new" ? undefined : editing} onDone={() => setEditing(null)} />}
       </Modal>
     </>
   );
