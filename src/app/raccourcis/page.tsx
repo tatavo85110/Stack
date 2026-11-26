@@ -113,7 +113,9 @@ function Shortcuts() {
     if (params.get("ajout")) setEditing("new");
   }, [params]);
   const cats = useStack(useShallow((st) => categoryList("shortcuts", st)));
+  const [only, setOnly] = useState<string | null>(null);
   const groups = [...cats, ""].filter((g) => shortcuts.some((s) => (s.group || "") === g));
+  const shown = only === null ? groups : groups.filter((g) => g === only);
 
   return (
     <>
@@ -122,8 +124,17 @@ function Shortcuts() {
         title="Raccourcis"
         actions={<><CategoryManager kind="shortcuts" /><Button variant="primary" onClick={() => setEditing("new")}><Plus size={16} /> Ajouter un raccourci</Button></>}
       />
+      {groups.length > 1 && (
+        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          {[null, ...groups].map((c) => (
+            <button key={c ?? "__all"} onClick={() => setOnly(c)} className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors ${only === c ? "bg-night text-white dark:bg-bright" : "bg-surface text-ink-2 shadow-card hover:text-ink"}`}>
+              {c === null ? "Tous" : c || NO_CATEGORY} <span className="opacity-60">{c === null ? shortcuts.length : shortcuts.filter((s) => (s.group || "") === c).length}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="space-y-6">
-        {groups.map((g) => (
+        {shown.map((g) => (
           <section key={g}>
             <h2 className="mb-3 text-sm font-bold text-ink-2">{g || NO_CATEGORY}</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

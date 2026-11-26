@@ -2,6 +2,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import type { ReactNode, ButtonHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import type { AppStatus } from "@/lib/types";
 
 export function Card({ children, className, title, action }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode }) {
@@ -144,11 +145,12 @@ export function Progress({ value, tone = "bright" }: { value: number; tone?: "br
   );
 }
 
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold text-ink-2">{label}</span>
       {children}
+      {hint && <span className="mt-1 block text-[11px] leading-snug text-ink-2/80">{hint}</span>}
     </label>
   );
 }
@@ -157,14 +159,16 @@ export const inputCls =
 
 export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal aria-label={title}>
+  // Rendered on <body>: the page's enter animation would otherwise trap the modal under the mobile bottom bar.
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center" role="dialog" aria-modal aria-label={title}>
       <div className="animate-fade absolute inset-0 bg-night/50 backdrop-blur-[2px]" onClick={onClose} />
       <div className="animate-slide-up relative max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-surface p-6 shadow-2xl sm:max-w-lg sm:rounded-3xl">
         <h2 className="mb-5 text-lg font-extrabold">{title}</h2>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

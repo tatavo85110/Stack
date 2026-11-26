@@ -98,8 +98,14 @@ export const NO_CATEGORY = "Sans catégorie";
 const catOf = (kind: CategoryKind, x: { group?: string; category?: string }) => (kind === "shortcuts" ? x.group : x.category) || "";
 
 /** Categories in Mathéo's order, plus any used by an item but missing from the list. */
+export const DEFAULT_CATEGORIES: Record<CategoryKind, string[]> = {
+  shortcuts: ["Admin et compta", "Banque", "Clients", "Dev", "Design", "Hébergement", "Outils", "Réseaux sociaux", "Perso"],
+  apps: ["Sites clients", "Applis clients", "Mes projets", "SaaS", "Tests"],
+};
+
 export function categoryList(kind: CategoryKind, st: { categories?: Record<CategoryKind, string[]>; shortcuts: Shortcut[]; apps: App[] }) {
-  const saved = st.categories?.[kind] ?? [];
+  // Until Mathéo edits his own list, the predefined categories are offered.
+  const saved = st.categories?.[kind]?.length ? st.categories[kind] : DEFAULT_CATEGORIES[kind];
   const used = (kind === "shortcuts" ? st.shortcuts : st.apps).map((x) => catOf(kind, x)).filter(Boolean);
   return [...new Set([...saved, ...used])];
 }
