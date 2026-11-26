@@ -58,7 +58,7 @@ interface State {
   startTimer: (projectId: string, label: string) => void;
   stopTimer: () => void;
   addTimeEntry: (e: Omit<TimeEntry, "id">) => void;
-  addClient: (c: Pick<Client, "name" | "contact" | "email" | "phone" | "sector" | "source" | "stage" | "quoteAmount">) => string;
+  addClient: (c: Pick<Client, "name" | "contact" | "email" | "phone" | "sector" | "source" | "stage" | "quoteAmount"> & Partial<Pick<Client, "email2" | "phone2">>) => string;
   setClientStage: (id: string, stage: Client["stage"]) => void;
   completeNextAction: (id: string) => void;
   addHistory: (id: string, label: string) => void;

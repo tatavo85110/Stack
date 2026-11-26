@@ -10,7 +10,7 @@ const SOURCES: Client["source"][] = ["Bouche-à-oreille", "Site web", "LinkedIn"
 export function ClientForm({ initial, onDone, onDeleted }: { initial?: Client; onDone: () => void; onDeleted?: () => void }) {
   const { addClient, updateClient, removeClient } = useStack();
   const [f, setF] = useState({
-    name: initial?.name ?? "", contact: initial?.contact ?? "", email: initial?.email ?? "", phone: initial?.phone ?? "", sector: initial?.sector ?? "",
+    name: initial?.name ?? "", contact: initial?.contact ?? "", email: initial?.email ?? "", phone: initial?.phone ?? "", email2: initial?.email2 ?? "", phone2: initial?.phone2 ?? "", sector: initial?.sector ?? "",
     source: initial?.source ?? ("Bouche-à-oreille" as Client["source"]), stage: initial?.stage ?? ("Prospect" as Stage), quoteAmount: initial?.quoteAmount ? String(initial.quoteAmount) : "",
   });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
@@ -22,12 +22,14 @@ export function ClientForm({ initial, onDone, onDeleted }: { initial?: Client; o
       if (initial) updateClient(initial.id, data); else addClient(data);
       onDone();
     }}>
-      <Field label="Entreprise"><input className={inputCls} value={f.name} onChange={set("name")} required autoFocus /></Field>
+      <Field label="Client (entreprise ou particulier)"><input className={inputCls} value={f.name} onChange={set("name")} required autoFocus placeholder="Ex. Boulangerie Dupont, ou Marie et Paul Martin" /></Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Contact"><input className={inputCls} value={f.contact} onChange={set("contact")} /></Field>
-        <Field label="Secteur"><input className={inputCls} value={f.sector} onChange={set("sector")} /></Field>
+        <Field label="Personne à contacter" hint="Ton interlocuteur, si le client est une entreprise. Facultatif."><input className={inputCls} value={f.contact} onChange={set("contact")} placeholder="Ex. Claire Dupont" /></Field>
+        <Field label="Secteur"><input className={inputCls} value={f.sector} onChange={set("sector")} placeholder="Ex. Restauration" /></Field>
         <Field label="E-mail"><input type="email" className={inputCls} value={f.email} onChange={set("email")} /></Field>
-        <Field label="Téléphone"><input className={inputCls} value={f.phone} onChange={set("phone")} /></Field>
+        <Field label="2e e-mail (facultatif)"><input type="email" className={inputCls} value={f.email2} onChange={set("email2")} /></Field>
+        <Field label="Téléphone"><input type="tel" className={inputCls} value={f.phone} onChange={set("phone")} /></Field>
+        <Field label="2e téléphone (facultatif)"><input type="tel" className={inputCls} value={f.phone2} onChange={set("phone2")} /></Field>
         <Field label="Origine"><select className={inputCls} value={f.source} onChange={set("source")}>{SOURCES.map((s) => <option key={s}>{s}</option>)}</select></Field>
         <Field label="Étape"><select className={inputCls} value={f.stage} onChange={set("stage")}>{STAGES.map((s) => <option key={s}>{s}</option>)}</select></Field>
       </div>

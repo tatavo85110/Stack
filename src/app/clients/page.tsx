@@ -31,7 +31,7 @@ function Clients() {
   const months = revenueByMonth(clients, 12);
 
   const exportCsv = () => {
-    const rows = [["Client", "Contact", "E-mail", "Téléphone", "Étape", "CA total"], ...clients.map((c) => [c.name, c.contact, c.email, c.phone, c.stage, String(clientTotal(c))])];
+    const rows = [["Client", "Contact", "E-mail", "2e e-mail", "Téléphone", "2e téléphone", "Étape", "CA total"], ...clients.map((c) => [c.name, c.contact, c.email, c.email2 ?? "", c.phone, c.phone2 ?? "", c.stage, String(clientTotal(c))])];
     const blob = new Blob(["﻿" + rows.map((r) => r.map((x) => `"${x.replace(/"/g, '""')}"`).join(";")).join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

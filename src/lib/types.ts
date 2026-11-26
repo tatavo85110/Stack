@@ -57,9 +57,12 @@ export interface HistoryItem { date: string; label: string }
 export interface Client {
   id: string;
   name: string;
+  /** Person to talk to at the client (e.g. the manager), when the client is a company. */
   contact: string;
   email: string;
   phone: string;
+  email2?: string;
+  phone2?: string;
   sector: string;
   stage: Stage;
   source: "Bouche-à-oreille" | "Site web" | "LinkedIn" | "Malt" | "Réseau";

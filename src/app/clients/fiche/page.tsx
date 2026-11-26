@@ -91,10 +91,12 @@ function ClientPage() {
             <div className="flex flex-wrap items-center gap-4">
               <Avatar text={initialsOf(c.contact || c.name)} className="size-12 text-sm" />
               <div className="flex-1">
-                <p className="font-bold">{c.contact || "—"}</p>
+                <p className="font-bold">{c.contact || c.name}</p>
                 <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-2">
                   {c.email && <a href={`mailto:${c.email}`} className="flex items-center gap-1.5 hover:text-bright"><Mail size={14} />{c.email}</a>}
+                  {c.email2 && <a href={`mailto:${c.email2}`} className="flex items-center gap-1.5 hover:text-bright"><Mail size={14} />{c.email2}</a>}
                   {c.phone && <a href={`tel:${c.phone.replace(/\s/g, "")}`} className="flex items-center gap-1.5 hover:text-bright"><Phone size={14} />{c.phone}</a>}
+                  {c.phone2 && <a href={`tel:${c.phone2.replace(/\s/g, "")}`} className="flex items-center gap-1.5 hover:text-bright"><Phone size={14} />{c.phone2}</a>}
                 </div>
               </div>
             </div>
