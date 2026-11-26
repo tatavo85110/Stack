@@ -189,7 +189,7 @@ export default function Home() {
     ca: () => (
       <Card title="Chiffre d'affaires, 6 mois" action={more("/clients/stats", "Stats")}>
         <Bars data={months} highlight={months.length - 1} format={eur} height={170} />
-        {s.indySyncedAt ? <p className="mt-2 text-xs text-ink-2">Indy, mis à jour le {new Date(s.indySyncedAt).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p> : <p className="mt-2 text-xs text-ink-2">Pas encore relié à Indy : voir <Link className="font-semibold text-bright" href="/reglages">Réglages</Link>.</p>}
+        {s.indySyncedAt && Date.now() - Date.parse(s.indySyncedAt) > 2 * 86400000 ? <p className="mt-2 text-xs font-semibold text-warn">Pas mis à jour depuis {Math.floor((Date.now() - Date.parse(s.indySyncedAt)) / 86400000)} jours : ouvre <a className="underline" href={INDY_URL} target="_blank" rel="noreferrer">Indy</a> et clique sur ton favori « CA → Stack ».</p> : s.indySyncedAt ? <p className="mt-2 text-xs text-ink-2">Indy, mis à jour le {new Date(s.indySyncedAt).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p> : <p className="mt-2 text-xs text-ink-2">Pas encore relié à Indy : voir <Link className="font-semibold text-bright" href="/reglages">Réglages</Link>.</p>}
       </Card>
     ),
     projet: () =>
