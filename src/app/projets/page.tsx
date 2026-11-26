@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import clsx from "clsx";
-import { Plus, Play, CalendarDays, X } from "lucide-react";
+import { Plus, Play, CalendarDays, X, GripVertical } from "lucide-react";
 import { useStack, uid } from "@/lib/store";
 import type { Column, Deliverable, Project, Todo } from "@/lib/types";
 import { Button, Field, Kpi, Modal, PageHeader, Pill, Progress, inputCls } from "@/components/ui";
@@ -48,6 +48,18 @@ function ProjectForm({ column, initial, onDone }: { column: Column; initial?: Pr
   const [tasks, setTasks] = useState<Todo[]>(initial?.tasks ?? []);
   const [deliv, setDeliv] = useState<Deliverable[]>(initial?.deliverables ?? []);
   const [newTask, setNewTask] = useState("");
+  const [dragId, setDragId] = useState<string | null>(null);
+  // Drag a step by its handle (mouse or finger) to change its position.
+  const onGripMove = (e: React.PointerEvent) => {
+    if (!dragId) return;
+    const over = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>("[data-step]")?.dataset.step;
+    if (!over || over === dragId) return;
+    setTasks((list) => {
+      const from = list.findIndex((x) => x.id === dragId), to = list.findIndex((x) => x.id === over);
+      if (from < 0 || to < 0) return list;
+      const next = [...list]; const [m] = next.splice(from, 1); next.splice(to, 0, m); return next;
+    });
+  };
   const [d, setD] = useState({ label: "", url: "https://" });
   const applyTemplate = (id: string) => {
     const t = templates.find((x) => x.id === id);
@@ -85,7 +97,19 @@ function ProjectForm({ column, initial, onDone }: { column: Column; initial?: Pr
         <p className="mb-1.5 text-xs font-semibold text-ink-2">Étapes {auto !== null && `(avancement calculé : ${auto} %)`}</p>
         <ul className="space-y-1">
           {tasks.map((t) => (
-            <li key={t.id} className="flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 text-sm">
+            <li key={t.id} data-step={t.id} className={clsx("flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 text-sm transition-shadow", dragId === t.id && "relative z-10 shadow-md ring-2 ring-[var(--bright)]")}>
+              {tasks.length > 1 && (
+                <span
+                  role="button"
+                  aria-label="Glisser pour déplacer l'étape"
+                  title="Glisser pour déplacer"
+                  className="-ml-1 cursor-grab touch-none text-ink-2 active:cursor-grabbing"
+                  onPointerDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); setDragId(t.id); }}
+                  onPointerMove={onGripMove}
+                  onPointerUp={() => setDragId(null)}
+                  onPointerCancel={() => setDragId(null)}
+                ><GripVertical size={15} /></span>
+              )}
               <input type="checkbox" checked={t.done} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} className="size-4 accent-[var(--bright)]" aria-label={t.label} />
               <span className={clsx("flex-1", t.done && "text-ink-2 line-through")}>{t.label}</span>
               <button type="button" onClick={() => setTasks(tasks.filter((x) => x.id !== t.id))} className="text-ink-2 hover:text-down" aria-label="Retirer l'étape"><X size={14} /></button>
