@@ -27,7 +27,7 @@ export default function Stats() {
       <p className="-mt-3 mb-5 text-sm text-ink-2">Le chiffre d&apos;affaires vient de tes exports Indy, sans connexion bancaire. Les heures viennent du suivi du temps.</p>
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi tone="night" label={`1 · CA ${new Date().getFullYear()}`} value={eur(revenueYear(clients))} />
-        <Kpi label="2 · CA moyen / mois" value={eur(monthlyAverage(clients))} hint="Sur les 12 derniers mois" />
+        <Kpi label="2 · CA moyen / mois" value={eur(monthlyAverage(clients))} hint="Depuis ton premier mois de CA (12 mois max)" />
         <Kpi tone="ice" label="3 · Panier moyen" value={eur(averageBasket(clients))} hint="Projets de plus de 500 €" />
         <Kpi tone="plain" label="4 · Taux de conversion" value={`${num(conversionRate(clients))} %`} />
         <Kpi tone="plain" label="5 · Délai moyen de signature" value={`${num(signatureDelay(clients))} j`} />

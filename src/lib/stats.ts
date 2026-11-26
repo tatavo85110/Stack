@@ -49,7 +49,14 @@ export function signatureDelay(clients: Client[]) {
 }
 
 /** Average monthly revenue over the last 12 months. */
-export const monthlyAverage = (clients: Client[]) => revenueByMonth(clients, 12).reduce((a, m) => a + m.value, 0) / 12;
+/** Average monthly revenue over the last 12 months, counted from the first month with revenue (a new business isn't penalised by empty months before it started). */
+export function monthlyAverage(clients: Client[]) {
+  const months = revenueByMonth(clients, 12);
+  const first = months.findIndex((m) => m.value > 0);
+  if (first < 0) return 0;
+  const active = months.slice(first);
+  return active.reduce((a, m) => a + m.value, 0) / active.length;
+}
 
 export function sources(clients: Client[]) {
   const m = new Map<string, number>();
