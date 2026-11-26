@@ -18,7 +18,7 @@ function TemplateForm({ initial, onDone }: { initial?: ProjectTemplate; onDone: 
     }}>
       <Field label="Nom du modèle"><input className={inputCls} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required autoFocus /></Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Étiquette"><input className={inputCls} value={f.tag} onChange={(e) => setF({ ...f, tag: e.target.value })} /></Field>
+        <Field label="Type de projet"><input className={inputCls} value={f.tag} onChange={(e) => setF({ ...f, tag: e.target.value })} /></Field>
         <Field label="Durée prévue (jours)"><input type="number" min="1" className={inputCls} value={f.days} onChange={(e) => setF({ ...f, days: Number(e.target.value) })} /></Field>
       </div>
       <Field label="Étapes (une par ligne)"><textarea className={inputCls + " h-44"} value={f.tasks} onChange={(e) => setF({ ...f, tasks: e.target.value })} /></Field>

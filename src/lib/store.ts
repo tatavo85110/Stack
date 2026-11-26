@@ -134,8 +134,8 @@ export const DEFAULT_SETTINGS: Settings = {
   supabaseUrl: "https://lljdjaribokedlowakud.supabase.co", supabaseKey: "sb_publishable_E7OOIK6lFTDlytbSQpOfyg_l62zdyR1",
 };
 const DEFAULT_TEMPLATES: ProjectTemplate[] = [
-  { id: "tpl-site", name: "Site vitrine", tag: "Site", days: 21, tasks: ["Brief et arborescence", "Maquettes", "Intégration", "Contenus du client", "SEO de base", "Mise en ligne", "Formation du client"] },
-  { id: "tpl-app", name: "Application web", tag: "Appli", days: 45, tasks: ["Cadrage et devis signé", "Modèle de données", "Maquettes", "Développement", "Tests", "Mise en production", "Suivi Sentry"] },
+  { id: "tpl-site", name: "Site vitrine", tag: "Site web", days: 21, tasks: ["Brief et arborescence", "Maquettes", "Intégration", "Contenus du client", "SEO de base", "Mise en ligne", "Formation du client"] },
+  { id: "tpl-app", name: "Application web", tag: "Application web", days: 45, tasks: ["Cadrage et devis signé", "Modèle de données", "Maquettes", "Développement", "Tests", "Mise en production", "Suivi Sentry"] },
   { id: "tpl-maint", name: "Intervention maintenance", tag: "Maintenance", days: 3, tasks: ["Sauvegarde avant intervention", "Mises à jour", "Vérification du site", "Compte rendu au client"] },
 ];
 

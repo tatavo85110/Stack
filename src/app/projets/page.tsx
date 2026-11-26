@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import clsx from "clsx";
 import { Plus, Play, CalendarDays, X } from "lucide-react";
 import { useStack, uid } from "@/lib/store";
@@ -8,6 +9,31 @@ import { Button, Field, Kpi, Modal, PageHeader, Pill, Progress, inputCls } from 
 import { ProjectsTabs } from "@/components/ProjectsTabs";
 import { daysUntil, hours, isoIn, shortDate } from "@/lib/format";
 import { weekMinutes } from "@/lib/stats";
+
+/** Project types offered in the form; "Autre…" lets Mathéo type his own. */
+const PROJECT_TYPES = ["Site web", "Application web", "Maintenance", "Graphisme", "Print", "Identité visuelle", "Conseil"];
+
+function TypePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const used = useStack(useShallow((s) => s.projects.map((p) => p.tag)));
+  const options = [...new Set([...PROJECT_TYPES, ...used.filter(Boolean)])];
+  const [free, setFree] = useState(!!value && !options.includes(value));
+  return (
+    <Field label="Type de projet">
+      {free ? (
+        <div className="flex gap-2">
+          <input className={inputCls} autoFocus value={value} onChange={(e) => onChange(e.target.value)} placeholder="Ex. Faire-part de mariage, Logo, Flyer" />
+          <Button type="button" onClick={() => { setFree(false); if (!options.includes(value)) onChange(""); }} aria-label="Revenir à la liste"><X size={16} /></Button>
+        </div>
+      ) : (
+        <select className={inputCls} value={value} onChange={(e) => (e.target.value === "__free" ? (setFree(true), onChange("")) : onChange(e.target.value))}>
+          <option value="">Non précisé</option>
+          {options.map((t) => <option key={t} value={t}>{t}</option>)}
+          <option value="__free">Autre… (écrire le type)</option>
+        </select>
+      )}
+    </Field>
+  );
+}
 
 const COLS: { id: Column; label: string }[] = [
   { id: "todo", label: "À faire" },
@@ -18,7 +44,7 @@ const COLS: { id: Column; label: string }[] = [
 
 function ProjectForm({ column, initial, onDone }: { column: Column; initial?: Project; onDone: () => void }) {
   const { clients, templates, addProject, updateProject, removeProject } = useStack();
-  const [f, setF] = useState({ title: initial?.title ?? "", clientId: initial?.clientId ?? "", due: initial?.due ?? isoIn(14), tag: initial?.tag ?? "Front", progress: initial?.progress ?? 0 });
+  const [f, setF] = useState({ title: initial?.title ?? "", clientId: initial?.clientId ?? "", due: initial?.due ?? isoIn(14), tag: initial?.tag ?? "", progress: initial?.progress ?? 0 });
   const [tasks, setTasks] = useState<Todo[]>(initial?.tasks ?? []);
   const [deliv, setDeliv] = useState<Deliverable[]>(initial?.deliverables ?? []);
   const [newTask, setNewTask] = useState("");
@@ -54,7 +80,7 @@ function ProjectForm({ column, initial, onDone }: { column: Column; initial?: Pr
         </Field>
         <Field label="Échéance"><input type="date" className={inputCls} value={f.due} onChange={(e) => setF({ ...f, due: e.target.value })} /></Field>
       </div>
-      <Field label="Étiquette"><input className={inputCls} value={f.tag} onChange={(e) => setF({ ...f, tag: e.target.value })} /></Field>
+      <TypePicker value={f.tag} onChange={(tag) => setF((x) => ({ ...x, tag }))} />
       <div>
         <p className="mb-1.5 text-xs font-semibold text-ink-2">Étapes {auto !== null && `(avancement calculé : ${auto} %)`}</p>
         <ul className="space-y-1">
@@ -107,6 +133,8 @@ export default function Projets() {
   const week = weekMinutes(time).reduce((a, d) => a + d.value, 0);
   const billable = time.filter((t) => t.billable && weekMinutes(time).some((d) => d.iso === t.date)).reduce((a, t) => a + t.minutes, 0);
   const current = projects.find((p) => p.column === "doing");
+  const types = [...new Set(projects.map((p) => p.tag).filter(Boolean))];
+  const [type, setType] = useState<string | null>(null);
 
   return (
     <>
@@ -125,9 +153,18 @@ export default function Projets() {
         <Kpi label="Heures cette semaine" value={hours(week)} />
         <Kpi tone="ice" label="Facturables" value={hours(billable)} />
       </div>
+      {types.length > 1 && (
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          {[null, ...types].map((t) => (
+            <button key={t ?? "__all"} onClick={() => setType(t)} className={clsx("shrink-0 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors", type === t ? "bg-night text-white dark:bg-bright" : "bg-surface text-ink-2 shadow-card hover:text-ink")}>
+              {t ?? "Tous"} <span className="opacity-60">{t === null ? projects.length : projects.filter((p) => p.tag === t).length}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {COLS.map((col) => {
-          const items = projects.filter((p) => p.column === col.id);
+          const items = projects.filter((p) => p.column === col.id && (type === null || p.tag === type));
           return (
             <div
               key={col.id}
@@ -154,7 +191,7 @@ export default function Projets() {
                     >
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <span className="text-xs font-semibold text-ink-2">{cl?.name ?? "Perso"}</span>
-                        <Pill tone="info">{p.tag}</Pill>
+                        {p.tag && <Pill tone="info">{p.tag}</Pill>}
                       </div>
                       <button onClick={() => setEditing(p)} className="text-left font-semibold hover:text-bright">{p.title}</button>
                       {p.column !== "done" && p.progress > 0 && <div className="mt-3"><Progress value={p.progress} /></div>}
