@@ -97,18 +97,29 @@ function ProjectForm({ column, initial, onDone }: { column: Column; initial?: Pr
         <p className="mb-1.5 text-xs font-semibold text-ink-2">Étapes {auto !== null && `(avancement calculé : ${auto} %)`}</p>
         <ul className="space-y-1">
           {tasks.map((t) => (
-            <li key={t.id} data-step={t.id} className={clsx("flex items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 text-sm transition-shadow", dragId === t.id && "relative z-10 shadow-md ring-2 ring-[var(--bright)]")}>
+            <li
+              key={t.id}
+              data-step={t.id}
+              className={clsx("flex select-none items-center gap-2 rounded-lg bg-muted px-2.5 py-1.5 text-sm transition-shadow", tasks.length > 1 && "cursor-grab", dragId === t.id && "relative z-10 cursor-grabbing shadow-md ring-2 ring-[var(--bright)]")}
+              onPointerDown={(e) => {
+                // With a mouse the whole row can be dragged; on a phone only the handle (so the list still scrolls).
+                if (tasks.length < 2 || e.pointerType !== "mouse" || (e.target as HTMLElement).closest("input,button")) return;
+                e.preventDefault(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); setDragId(t.id);
+              }}
+              onPointerMove={onGripMove}
+              onPointerUp={() => setDragId(null)}
+              onPointerCancel={() => setDragId(null)}
+            >
               {tasks.length > 1 && (
                 <span
-                  role="button"
                   aria-label="Glisser pour déplacer l'étape"
                   title="Glisser pour déplacer"
-                  className="-ml-1 cursor-grab touch-none text-ink-2 active:cursor-grabbing"
-                  onPointerDown={(e) => { e.preventDefault(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); setDragId(t.id); }}
+                  className="-my-1 -ml-1.5 flex cursor-grab touch-none items-center self-stretch px-1 text-ink-2 active:cursor-grabbing"
+                  onPointerDown={(e) => { if (e.pointerType === "mouse") return; e.preventDefault(); e.stopPropagation(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); setDragId(t.id); }}
                   onPointerMove={onGripMove}
                   onPointerUp={() => setDragId(null)}
                   onPointerCancel={() => setDragId(null)}
-                ><GripVertical size={15} /></span>
+                ><GripVertical size={18} /></span>
               )}
               <input type="checkbox" checked={t.done} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} className="size-4 accent-[var(--bright)]" aria-label={t.label} />
               <span className={clsx("flex-1", t.done && "text-ink-2 line-through")}>{t.label}</span>
