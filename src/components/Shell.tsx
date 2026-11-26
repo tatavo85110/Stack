@@ -13,6 +13,7 @@ import { useStack, useHydrated } from "@/lib/store";
 import { INDY_URL } from "@/lib/format";
 import { TimerBar } from "./TimerBar";
 import { useIndyHash } from "./IndySync";
+import { SyncBanner } from "./SyncBanner";
 
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
@@ -133,6 +134,7 @@ function Cockpit({ children, path }: { children: ReactNode; path: string }) {
         </header>
 
         <div className="no-print"><TimerBar /></div>
+        {hydrated && <SyncBanner path={path} />}
         <main key={path} className="page-enter mx-auto w-full max-w-[1400px] flex-1 px-4 pt-6 pb-28 md:px-8 md:pb-12">
           {hydrated ? children : <div className="h-96 animate-pulse rounded-2xl bg-muted" />}
         </main>
